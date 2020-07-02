@@ -13,7 +13,6 @@ class ProDemosaicDataset(SmithData):
 	def __init__(self, root, invert=True, crop=True):
 		super(ProDemosaicDataset, self).__init__(root, invert, crop)
 
-	def __getitem__(self, idx):
 		pro = super(ProDemosaicDataset, self).__getitem__(idx)
 		if pro.shape[2] % 2 == 0:
 			pro = pro[:2, :, :-1]
@@ -30,6 +29,8 @@ class ProDemosaicDataset(SmithData):
 		pro = torch.Tensor(pro, dtype=torch.float)
 
 		return sharp, pro
+
+	def __getitem__(self, idx):
 
 
 class SmithData():
