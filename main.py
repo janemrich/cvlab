@@ -46,7 +46,13 @@ def fit(net, criterion, dataset, epochs, batch_size=24):
 
 if __name__=="__main__":
 	# dataset = N2NDataset('openimages/train', target_size=(400, 400))
-	dataset = DemosaicN2NDataset('openimages/train', target_size=(400, 400))
+	dataset = DemosaicingDataset('openimages/train', target_size=(400, 400))
+
+	plt.figure(figsize=(15, 15))
+	for i in range(0,6,2):
+		plt.subplot(3, 2, i+1)
+		plt.imshow(dataset[i][1].permute(1, 2, 0))
+	plt.savefig('gt.jpg')
 
 	net = torch.nn.Sequential(
 		model.ResBlock(3, 3, hidden_channels=[16, 32, 48, 64]),
@@ -57,6 +63,3 @@ if __name__=="__main__":
 	loss = torch.nn.MSELoss()
 
 	fit(net, loss, dataset, 4, batch_size=8)
-
-	
-

@@ -8,6 +8,76 @@ from matplotlib import image
 import glob
 
 
+class ProDemosaicDataset(SmithData):
+
+	def __init__(self, root, invert=True, crop=True):
+		super(ProDemosaicDataset, self).__init__(root, invert, crop)
+
+	def __getitem__(self, idx):
+		pro = super(ProDemosaicDataset, self).__getitem__(idx)
+		if pro.shape[2] % 2 == 0:
+			pro = pro[:2, :, :-1]
+
+		pro_high = pro[0, :, :-1]
+		pro_low = pro[1, :, 1:]
+		
+		sharp_high = (pro_high[:, 0::2] + pro_high[:, 1::2]) / 2
+		sharp_low = (pro_low[:, 0::2] + pro_low[:, 1::2]) / 2
+		
+		sharp = np.stack((sharp_high, sharp_low), axis=1)
+		
+		sharp = torch.Tensor(sharp, dtype=torch.float)
+		pro = torch.Tensor(pro, dtype=torch.float)
+
+		return sharp, pro
+
+
+class SmithData():
+	"""Manages access to Smith images dataset format."""
+
+	def __init__(self, root, invert=True, crop=False):
+		self.root = root
+		self.invert = invert
+		self.crop = crop
+		self.paths_grouped = self.load_grouped_filenames() # [(high, low, rgb), ...]
+
+	def load_grouped_filenames(self):
+		files = sorted(os.listdir(self.root))
+	
+		return list(zip(files[0::3], files[1::3], files[2::3]))
+
+	def open(self, path):
+		high = Image.open(os.path.join(self.root, path[0]))
+		low = Image.open(os.path.join(self.root, path[1]))
+		rgb = Image.open(os.path.join(self.root, path[2]))
+
+		arr = np.stack((np.array(high), np.array(low)), axis=0)
+
+		# normalize to 0-1 range
+		arr /= 65535.0
+		arr_i = 1.0 - arr
+
+		if self.crop:
+			hist_row = np.sum(arr_i[0], axis=1)
+			hist_col = np.sum(arr_i[0], axis=0)
+			t = 2
+			arr = arr[:, hist_row < t]	
+			arr = arr[:, :, hist_col < t]
+			arr_i = arr_i[:, hist_row < t]
+			arr_i = arr_i[:, :, hist_col < t]
+
+		if self.invert:
+			return arr_i
+		else:
+			return arr
+
+	def __getitem__(self, idx):
+		return self.open(self.paths_grouped[idx])
+
+	def __len__(self):
+		return len(self.paths_grouped)
+
+
 class DemosaicingDataset(Dataset):
 	"""Dataset that creates a mosaiced image from an original"""
 
@@ -40,8 +110,8 @@ class DemosaicingDataset(Dataset):
 		img = Image.open(img_path).convert('RGB')
 		img = np.array(ImageOps.fit(img, self.target_size))/255.0
 		mosaic = self.mosaic_mask * np.copy(img)
-		img = torch.Tensor(img, dtype=torch.float).permute(2, 0, 1)
-		mosaic = torch.Tensor(mosaic, dtype=torch.float).permute(2, 0, 1)
+		img = torch.Tensor(img).permute(2, 0, 1)
+		mosaic = torch.Tensor(mosaic).permute(2, 0, 1)
 		return mosaic, img
 
 	def __len__(self):
