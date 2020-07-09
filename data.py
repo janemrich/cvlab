@@ -8,31 +8,6 @@ from matplotlib import image
 import glob
 
 
-class ProDemosaicDataset(SmithData):
-
-	def __init__(self, root, invert=True, crop=True):
-		super(ProDemosaicDataset, self).__init__(root, invert, crop)
-
-		pro = super(ProDemosaicDataset, self).__getitem__(idx)
-		if pro.shape[2] % 2 == 0:
-			pro = pro[:2, :, :-1]
-
-		pro_high = pro[0, :, :-1]
-		pro_low = pro[1, :, 1:]
-		
-		sharp_high = (pro_high[:, 0::2] + pro_high[:, 1::2]) / 2
-		sharp_low = (pro_low[:, 0::2] + pro_low[:, 1::2]) / 2
-		
-		sharp = np.stack((sharp_high, sharp_low), axis=1)
-		
-		sharp = torch.Tensor(sharp, dtype=torch.float)
-		pro = torch.Tensor(pro, dtype=torch.float)
-
-		return sharp, pro
-
-	def __getitem__(self, idx):
-
-
 class SmithData():
 	"""Manages access to Smith images dataset format."""
 
@@ -77,6 +52,32 @@ class SmithData():
 
 	def __len__(self):
 		return len(self.paths_grouped)
+
+
+class ProDemosaicDataset(SmithData):
+
+	def __init__(self, root, invert=True, crop=True):
+		super(ProDemosaicDataset, self).__init__(root, invert, crop)
+
+		pro = super(ProDemosaicDataset, self).__getitem__(idx)
+		if pro.shape[2] % 2 == 0:
+			pro = pro[:2, :, :-1]
+
+		pro_high = pro[0, :, :-1]
+		pro_low = pro[1, :, 1:]
+		
+		sharp_high = (pro_high[:, 0::2] + pro_high[:, 1::2]) / 2
+		sharp_low = (pro_low[:, 0::2] + pro_low[:, 1::2]) / 2
+		
+		sharp = np.stack((sharp_high, sharp_low), axis=1)
+		
+		sharp = torch.Tensor(sharp, dtype=torch.float)
+		pro = torch.Tensor(pro, dtype=torch.float)
+
+		return sharp, pro
+
+	#def __getitem__(self, idx):
+	#TODO
 
 
 class DemosaicingDataset(Dataset):
