@@ -6,6 +6,7 @@ import os
 import tifffile
 from matplotlib import image
 import glob
+import random
 
 
 class SmithData():
@@ -16,39 +17,49 @@ class SmithData():
 		self.invert = invert
 		self.crop = crop
 		self.paths_grouped = self.load_grouped_filenames() # [(high, low, rgb), ...]
+		if self.crop:
+			self.compute_masks()
+
+	def compute_masks(self):
+		t = 2
+		self.masks = []
+		max_height = 0
+		max_width = 0
+		for path in self.paths_grouped:
+			arr = np.array(Image.open(os.path.join(self.root, path[0]))) # use high image to calculate masking box
+			arr_i = 1.0 - (arr / 65535)
+			hist_row = np.where(np.sum(arr_i, axis=1) < t)
+			hist_col = np.where(np.sum(arr_i, axis=0) < t)
+			bbox = [min(hist_row), max(hist_row)+1, min(hist_col), max(hist_col)+1]
+			self.masks.append(bbox)
+			max_height = max(max_height, bbox[1]-bbox[0])
+			max_width = max(max_width, bbox[3]-bbox[2])
+
+		print("Precomupted cropping masks. max_height: {}, max_width: {}".format(max_height, max_width))
 
 	def load_grouped_filenames(self):
 		files = sorted(os.listdir(self.root))
 	
 		return list(zip(files[0::3], files[1::3], files[2::3]))
 
-	def open(self, path):
-		high = Image.open(os.path.join(self.root, path[0]))
-		low = Image.open(os.path.join(self.root, path[1]))
-		rgb = Image.open(os.path.join(self.root, path[2]))
+	def __getitem__(self, idx):
+		high = Image.open(os.path.join(self.root, self.paths[idx][0]))
+		low = Image.open(os.path.join(self.root, self.paths[idx][1]))
+		rgb = Image.open(os.path.join(self.root, self.paths[idx][2]))
+		bbox = self.masks[idx]
 
 		arr = np.stack((np.array(high), np.array(low)), axis=0)
 
 		# normalize to 0-1 range
 		arr /= 65535.0
-		arr_i = 1.0 - arr
 
 		if self.crop:
-			hist_row = np.sum(arr_i[0], axis=1)
-			hist_col = np.sum(arr_i[0], axis=0)
-			t = 2
-			arr = arr[:, hist_row < t]	
-			arr = arr[:, :, hist_col < t]
-			arr_i = arr_i[:, hist_row < t]
-			arr_i = arr_i[:, :, hist_col < t]
+			arr = arr[:, bbox[0]:bbox[1], bbox[2]:bbox[3]]	
 
 		if self.invert:
-			return arr_i
+			return 1.0 - arr
 		else:
 			return arr
-
-	def __getitem__(self, idx):
-		return self.open(self.paths_grouped[idx])
 
 	def __len__(self):
 		return len(self.paths_grouped)
@@ -56,10 +67,30 @@ class SmithData():
 
 class ProDemosaicDataset(SmithData):
 
-	def __init__(self, root, invert=True, crop=True):
+	def __init__(self, root, target_size, invert=True, crop=True):
 		super(ProDemosaicDataset, self).__init__(root, invert, crop)
+		self.patch_rows = target_size[1]
+		self.patch_cols = target_size[0]
 
+	def __getitem__(self, idx):
 		pro = super(ProDemosaicDataset, self).__getitem__(idx)
+
+		# crop pro image to the desired patch size
+		# fill up with padding if necessary
+		patch = np.zeros((2, self.patch_rows, self.patch_cols))
+
+		# cut a random patch from the image	
+		shift_row = 0
+		shift_col = 0	
+		diff_row = pro.shape[0] - patch.shape[0]
+		if diff_row > 0:
+			shift_row = random.randrange(diff_row)
+		diff_col = pro.shape[1] - patch.shape[1]
+		if diff_col > 0:
+			shift_col = random.randrange(diff_col)
+
+		patch = pro[:, shift_row:patch.shape[0]+max(diff_row, 0), shift_col:patch.shape[0]+max(diff_col, 0)]
+
 		if pro.shape[2] % 2 == 0:
 			pro = pro[:2, :, :-1]
 
@@ -76,9 +107,7 @@ class ProDemosaicDataset(SmithData):
 
 		return sharp, pro
 
-	#def __getitem__(self, idx):
-	#TODO
-
+		
 
 class DemosaicingDataset(Dataset):
 	"""Dataset that creates a mosaiced image from an original"""
