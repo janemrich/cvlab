@@ -39,9 +39,9 @@ def fit(net, criterion, dataset, epochs, batch_size=24):
 		plt.figure(figsize=(15, 15))
 		for i in range(0,6,2):
 			plt.subplot(3, 2, i+1)
-			plt.imshow(dataset[i][0].permute(1, 2, 0))
+			plt.imshow(dataset[i][0][0]) # only show high image
 			plt.subplot(3, 2, i+2)
-			plt.imshow(net(torch.unsqueeze(dataset[i][0], 0).to(device)).to('cpu').squeeze().permute(1, 2, 0).detach())
+			plt.imshow(net(torch.unsqueeze(dataset[i][0], 0).to(device)).to('cpu').squeeze().detach()[0]) # only show high image
 		plt.savefig('epoch{}predicions.jpg'.format(e))
 
 if __name__=="__main__":
@@ -58,9 +58,9 @@ if __name__=="__main__":
 	plt.savefig('dataset-example.jpg')
 
 	net = torch.nn.Sequential(
-		model.ResBlock(3, 3, hidden_channels=[16, 32, 48, 64]),
-		model.ResBlock(3, 3, hidden_channels=[16, 32, 48, 64]),
-		model.ResBlock(3, 3, hidden_channels=[16, 32, 48, 64])
+		model.ResBlock(2, 3, hidden_channels=[32, 32, 32]),
+		#model.ResBlock(2, 3, hidden_channels=[16, 32, 16]),
+		model.ResBlock(2, 3, hidden_channels=[32, 32, 32])
 	)
 
 	loss = torch.nn.MSELoss()
