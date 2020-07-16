@@ -21,16 +21,17 @@ class SmithData():
 			self.compute_masks()
 
 	def compute_masks(self):
-		t = 2
+		t_row = 4.5
+		t_col = 7.0
 		self.masks = []
 		max_height = 0
 		max_width = 0
 		for path in self.paths_grouped:
 			arr = np.array(Image.open(os.path.join(self.root, path[0]))) # use high image to calculate masking box
 			arr_i = 1.0 - (arr / 65535)
-			hist_row = np.where(np.sum(arr_i, axis=1) < t)
-			hist_col = np.where(np.sum(arr_i, axis=0) < t)
-			bbox = [min(hist_row), max(hist_row)+1, min(hist_col), max(hist_col)+1]
+			hist_row = np.where(np.sum(arr_i, axis=1) > t_row)
+			hist_col = np.where(np.sum(arr_i, axis=0) > t_col)
+			bbox = [np.min(hist_row), np.max(hist_row)+1, np.min(hist_col), np.max(hist_col)+1]
 			self.masks.append(bbox)
 			max_height = max(max_height, bbox[1]-bbox[0])
 			max_width = max(max_width, bbox[3]-bbox[2])
@@ -43,15 +44,14 @@ class SmithData():
 		return list(zip(files[0::3], files[1::3], files[2::3]))
 
 	def __getitem__(self, idx):
-		high = Image.open(os.path.join(self.root, self.paths[idx][0]))
-		low = Image.open(os.path.join(self.root, self.paths[idx][1]))
-		rgb = Image.open(os.path.join(self.root, self.paths[idx][2]))
+		high = Image.open(os.path.join(self.root, self.paths_grouped[idx][0]))
+		low = Image.open(os.path.join(self.root, self.paths_grouped[idx][1]))
 		bbox = self.masks[idx]
 
 		arr = np.stack((np.array(high), np.array(low)), axis=0)
 
 		# normalize to 0-1 range
-		arr /= 65535.0
+		arr = arr / 65535.0
 
 		if self.crop:
 			arr = arr[:, bbox[0]:bbox[1], bbox[2]:bbox[3]]	
@@ -67,47 +67,65 @@ class SmithData():
 
 class ProDemosaicDataset(SmithData):
 
-	def __init__(self, root, target_size, invert=True, crop=True):
+	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8):
 		super(ProDemosaicDataset, self).__init__(root, invert, crop)
 		self.patch_rows = target_size[1]
-		self.patch_cols = target_size[0]
+		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
+		self.patches_per_image = patches_per_image
+		self.patches_positions = [[]] * super(ProDemosaicDataset, self).__len__()
 
-	def __getitem__(self, idx):
-		pro = super(ProDemosaicDataset, self).__getitem__(idx)
-
-		# crop pro image to the desired patch size
-		# fill up with padding if necessary
-		patch = np.zeros((2, self.patch_rows, self.patch_cols))
-
+	def create_patches(self, idx, pro_shape, patch_shape):
+		"""Creates a list of top left points of random patches for image idx and saves them to patches_positions"""
 		# cut a random patch from the image	
 		shift_row = 0
 		shift_col = 0	
-		diff_row = pro.shape[0] - patch.shape[0]
-		if diff_row > 0:
-			shift_row = random.randrange(diff_row)
-		diff_col = pro.shape[1] - patch.shape[1]
-		if diff_col > 0:
-			shift_col = random.randrange(diff_col)
-
-		patch = pro[:, shift_row:patch.shape[0]+max(diff_row, 0), shift_col:patch.shape[0]+max(diff_col, 0)]
-
-		if pro.shape[2] % 2 == 0:
-			pro = pro[:2, :, :-1]
-
-		pro_high = pro[0, :, :-1]
-		pro_low = pro[1, :, 1:]
 		
-		sharp_high = (pro_high[:, 0::2] + pro_high[:, 1::2]) / 2
-		sharp_low = (pro_low[:, 0::2] + pro_low[:, 1::2]) / 2
+		diff_row = pro_shape[1] - patch_shape[1]
+		diff_col = pro_shape[2] - patch_shape[2]
 		
-		sharp = np.stack((sharp_high, sharp_low), axis=1)
+		positions = []
+		for _ in range(self.patches_per_image):	
+			if diff_row > 0:
+				shift_row = random.randrange(diff_row)
+			if diff_col > 0:
+				shift_col = random.randrange(diff_col)
+			positions.append((shift_row, shift_col))
 		
-		sharp = torch.Tensor(sharp, dtype=torch.float)
-		pro = torch.Tensor(pro, dtype=torch.float)
+		self.patches_positions[idx]= positions
+
+
+	def __getitem__(self, idx):
+		idx_img = idx // self.patches_per_image
+		idx_patch = idx % self.patches_per_image
+		
+		pro = super(ProDemosaicDataset, self).__getitem__(idx_img)
+		patch = np.zeros((2, self.patch_rows, self.patch_cols))
+		
+		if len(self.patches_positions[idx_img]) <= idx_patch:
+			# we did not generate the ranndom patch positions for this image yet
+			self.create_patches(idx_img, pro.shape, patch.shape) 
+
+		shift_row, shift_col = self.patches_positions[idx_img][idx_patch]
+		# if patch is larger than image in a dimension, we make sure to stay in array range
+		patch = pro[:,
+			shift_row:shift_row+patch.shape[1]-min(pro.shape[1] - patch.shape[1], 0),
+			shift_col:shift_col+patch.shape[2]-min(pro.shape[2] - patch.shape[2], 0)]
+
+		patch_high = patch[0, :, :-1]
+		patch_low = patch[1, :, 1:]
+
+		sharp = np.zeros((2, self.patch_rows, self.patch_cols-1))
+
+		sharp[0, :, 0::2] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
+		sharp[1, :, 1::2] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
+		
+		sharp = torch.tensor(sharp, dtype=torch.float)
+		pro = torch.tensor(patch[:, :, :-1], dtype=torch.float)
 
 		return sharp, pro
 
-		
+	def __len__(self):
+		return super(ProDemosaicDataset, self).__len__() * self.patches_per_image
 
 class DemosaicingDataset(Dataset):
 	"""Dataset that creates a mosaiced image from an original"""

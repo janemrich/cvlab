@@ -6,11 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import model
-from data import N2NDataset, DemosaicingDataset
+from data import N2NDataset, DemosaicingDataset, ProDemosaicDataset
 import progress
 
 
-device = 'cuda'
+device = 'cpu'
 
 def fit(net, criterion, dataset, epochs, batch_size=24):
 	writer = SummaryWriter()
@@ -46,13 +46,16 @@ def fit(net, criterion, dataset, epochs, batch_size=24):
 
 if __name__=="__main__":
 	# dataset = N2NDataset('openimages/train', target_size=(400, 400))
-	dataset = DemosaicingDataset('openimages/train', target_size=(400, 400))
+	# dataset = DemosaicingDataset('openimages/train', target_size=(400, 400))
+	dataset = ProDemosaicDataset('data/pro-debug', target_size=(128, 128))
 
 	plt.figure(figsize=(15, 15))
 	for i in range(0,6,2):
 		plt.subplot(3, 2, i+1)
-		plt.imshow(dataset[i][1].permute(1, 2, 0))
-	plt.savefig('gt.jpg')
+		plt.imshow(dataset[i][0][0])
+		plt.subplot(3, 2, i+2)
+		plt.imshow(dataset[i][1][0])
+	plt.savefig('dataset-example.jpg')
 
 	net = torch.nn.Sequential(
 		model.ResBlock(3, 3, hidden_channels=[16, 32, 48, 64]),
