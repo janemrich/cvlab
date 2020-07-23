@@ -3,6 +3,12 @@ from torch import nn
 import numpy as np
 import torch.nn.functional as F
 
+_activations = {
+	'relu': torch.nn.ReLU,
+	'tanh': torch.nn.Tanh,
+	'sigmoid': torch.nn.Sigmoid,
+	'leakyrelu': torch.nn.LeakyReLU
+}
 
 class DoubleConv(nn.Module):
 	"""(convolution => [BN] => ReLU) * 2"""
@@ -110,27 +116,30 @@ class UNet(nn.Module):
 		return x
 
 class ConvBlock(nn.Module):
-	def __init__(self, in_channels, out_channels, kernel_size, padding_mode='zeros'):
+	def __init__(self, in_channels, out_channels, kernel_size, padding_mode='zeros', activation='relu'):
 		super(ConvBlock, self).__init__()
 		self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size, padding_mode=padding_mode, padding=kernel_size//2)
 		self.bn = torch.nn.BatchNorm2d(in_channels)
-		self.activation = torch.nn.Tanh()
+		self.activation = _activations[activation]()
 
 	def forward(self, x):
 		return self.activation(self.conv(self.bn(x)))
 
 class ResBlock(nn.Module):
-	def __init__(self, in_channels, kernel_size, padding_mode='zeros', hidden_channels=[]):
+	def __init__(self, in_channels, kernel_size, padding_mode='zeros', hidden_channels=[], activation='relu', last_layer_activation=False):
 		super(ResBlock, self).__init__()
+		self.activation = _activations[activation]() if last_layer_activation else None
 		if len(hidden_channels) == 0:
 			hidden_channels = [in_channels]
-		self.convs = torch.nn.ModuleList([ConvBlock(i, o, kernel_size) for i, o in zip([in_channels]+hidden_channels[:-1], hidden_channels)])
+		self.convs = torch.nn.ModuleList([ConvBlock(i, o, kernel_size, activation=activation) for i, o in zip([in_channels]+hidden_channels[:-1], hidden_channels)])
 		self.conv_out = torch.nn.Conv2d(hidden_channels[-1], in_channels, kernel_size, padding=kernel_size//2, padding_mode=padding_mode)
+		
 
 	def forward(self, x):
 		out = x
 		for conv in self.convs:
 			out = conv(out)
-		out = self.conv_out(out) 
+		out = self.conv_out(out)
+		if self.activation is not None:
+			out = self.activation(out)
 		return x + out
-
