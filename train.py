@@ -4,9 +4,12 @@ from PIL import Image, ImageOps
 from torch.utils.tensorboard import SummaryWriter
 import progress
 import utils
+import os
+from datetime import datetime
 
-def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu"):
-	writer = SummaryWriter()
+def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None):
+	logdir = os.path.join('runs', name + datetime.now().strftime("_%d%b-%H%M%S")) if name is not None else None
+	writer = SummaryWriter(log_dir=logdir)
 
 	ds_train, ds_val = utils.torch_random_split_frac(dataset, [0.9, 0.1])
 
