@@ -50,7 +50,7 @@ if __name__=="__main__":
 			model.ResBlock(2, 3, hidden_channels=[32, 32, 32])
 		)
 	elif model_name == "unet":
-		net = model.UNet(2, 2, **model_params)
+		net = model.UNet(2, **model_params)
 
 	loss = torch.nn.MSELoss()
 

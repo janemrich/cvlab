@@ -78,7 +78,7 @@ class OutConv(nn.Module):
 
 
 class UNet(nn.Module):
-	def __init__(self, n_channels, n_classes, bilinear=True, activation='relu', hidden=[64, 128, 256, 512]):
+	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512]):
 		super(UNet, self).__init__()
 		self.n_channels = n_channels
 		self.bilinear = bilinear
