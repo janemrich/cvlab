@@ -1,4 +1,9 @@
 {
+	"model": "unet",
+	"model_params": {
+		"bilinear": false,
+		"activation": "relu"
+	},
 	"train": {
 		"batch_size": 32
 	},

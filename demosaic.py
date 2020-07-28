@@ -13,7 +13,8 @@ import utils
 """
 Config format:
 {
-	model: "unet"/"resnet"/"densenet"
+	model: "unet"/"resnet"/"densenet",
+	model_params: {},
 	fit: {
 		batch_size: int,
 		epochs: int
@@ -41,6 +42,7 @@ if __name__=="__main__":
 	dataset = ProDemosaicDataset(args.data, **config.get("dataset", {}))
 
 	model_name = config.get("model", "unet")
+	model_params = config.get("model_params", {})
 	if  model_name == "resnet":
 		net = torch.nn.Sequential(
 			model.ResBlock(2, 3, hidden_channels=[32, 32, 32], last_layer_activation=True),
@@ -48,7 +50,7 @@ if __name__=="__main__":
 			model.ResBlock(2, 3, hidden_channels=[32, 32, 32])
 		)
 	elif model_name == "unet":
-		net = model.UNet(2, 2)
+		net = model.UNet(2, 2, **model_params)
 
 	loss = torch.nn.MSELoss()
 
