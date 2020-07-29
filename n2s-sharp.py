@@ -51,7 +51,7 @@ def fit(net, loss_function, dataset, epochs, batch_size=32):
             bar.inc_progress(i)
 
             if i % 10 == 0:
-                print('Loss (', i, ' \t', round(loss.item(), 4))
+                print('\nLoss (', i, ' \t', round(loss.item(), 6))
 
         test_data_loader = DataLoader(test_dataset,
                                         batch_size=32,
@@ -65,19 +65,22 @@ def fit(net, loss_function, dataset, epochs, batch_size=32):
         plt.imshow(noisy[0][0])
         plt.subplot(1,2,2)
         plt.imshow(net(noisy[:,1:,::]).detach()[0][0])
-        plt.show()
+        plt.savefig('n2s.png')
 
 
 # datasets
 dataset = N2SDataset('data/sharp', target_size=(128, 128))
 
 net = torch.nn.Sequential(
-    model.ResBlock(1, 3, hidden_channels=[32, 32, 32]),
-    #model.ResBlock(2, 3, hidden_channels=[16, 32, 16]),
-model.ResBlock(1, 3, hidden_channels=[32, 32, 32])
+    model.ConvBlock(1, 16, 3, padding_mode='reflect'),
+    model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
+    model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
+    model.OutConv(16, 1) 
+    # model.ResBlock(1, 3, padding_mode='reflect', hidden_channels=[32, 32]),
+    # model.ResBlock(1, 3, padding_mode='reflect', hidden_channels=[32, 32])
 )
 net = net.float()
 
 loss = MSELoss()
 
-fit(net, loss, dataset, 30, batch_size=8)
+fit(net, loss, dataset, 15, batch_size=16)

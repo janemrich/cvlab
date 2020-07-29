@@ -82,6 +82,7 @@ def interpolate_mask(tensor, mask, mask_inv):
     kernel = torch.Tensor(kernel).to(device)
     kernel = kernel / kernel.sum()
 
+    #filtered_tensor = torch.nn.functional.conv2d(tensor, kernel.double(), stride=1, padding=1)
     filtered_tensor = torch.nn.functional.conv2d(tensor, kernel, stride=1, padding=1)
 
     return filtered_tensor * mask + tensor * mask_inv
