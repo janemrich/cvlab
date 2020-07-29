@@ -65,6 +65,7 @@ class SmithData():
 		return len(self.paths_grouped)
 
 
+
 class N2SDataset(SmithData):
 
 	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8):
@@ -78,13 +79,17 @@ class N2SDataset(SmithData):
 
 
 class ProDemosaicDataset(SmithData):
-
-	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8):
+	"""
+		Args:
+			fill_missing: 'zero', 'same' or 'interp'
+	"""
+	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, fill_missing='same'):
 		super(ProDemosaicDataset, self).__init__(root, invert, crop)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
 		self.patches_per_image = patches_per_image
 		self.patches_positions = [[]] * super(ProDemosaicDataset, self).__len__()
+		self.fill_missing=fill_missing
 
 	def create_patches(self, idx, pro_shape, patch_shape):
 		"""Creates a list of top left points of random patches for image idx and saves them to patches_positions"""
@@ -105,7 +110,9 @@ class ProDemosaicDataset(SmithData):
 		
 		self.patches_positions[idx]= positions
 
-
+	def reset_patches(self):
+		self.patches_positions = [[]] * super(ProDemosaicDataset, self).__len__()
+	
 	def __getitem__(self, idx):
 		idx_img = idx // self.patches_per_image
 		idx_patch = idx % self.patches_per_image
@@ -130,6 +137,14 @@ class ProDemosaicDataset(SmithData):
 
 		sharp[0, :, 0::2] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
 		sharp[1, :, 1::2] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
+		
+		if self.fill_missing == 'same':
+			sharp[0, :, 1::2] = sharp[0, :, 0::2]
+			sharp[1, :, 0::2] = sharp[1, :, 1::2]
+		elif self.fill_missing == 'interp':
+			raise NotImplementedError
+		else:
+			raise ValueError("Unknown fill value {}".format(self.fill_missing))
 		
 		sharp = torch.tensor(sharp, dtype=torch.float)
 		pro = torch.tensor(patch[:, :, :-1], dtype=torch.float)
