@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 
 from noise2self.mask import Masker
 import model
+import progress
 
 
 def fit(net, loss_function, dataset, epochs, batch_size=32):
@@ -28,36 +29,43 @@ def fit(net, loss_function, dataset, epochs, batch_size=32):
 
 
     # training
-    for i, batch in enumerate(dataloader):
-        print(i)
-        noisy_images = batch
-        noisy_images = noisy_images.float()
+    for e in range(epochs):
+        bar = progress.Bar("Epoch {}, train".format(e), finish=train_size)
+        net.train()
+        for i, batch in enumerate(dataloader):
+            noisy_images = batch
+            noisy_images = noisy_images.float()
 
-        # for now only low input
-        noisy_images = noisy_images[:,:1,::]
-        net_input, mask = masker.mask(noisy_images, i)
-        net_output = net(net_input)
+            # for now only low input
+            noisy_images = noisy_images[:,:1,::]
+            net_input, mask = masker.mask(noisy_images, i)
+            net_output = net(net_input)
 
-        loss = loss_function(net_output*mask, noisy_images*mask)
+            loss = loss_function(net_output*mask, noisy_images*mask)
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        loss.backward()
+            loss.backward()
 
-        optimizer.step()
+            optimizer.step()
+            bar.inc_progress(i)
 
-        if i % 10 == 0:
-            print('Loss (', i, ' \t', round(loss.item(), 4))
-
-        if i == 100:
-            break
+            if i % 10 == 0:
+                print('Loss (', i, ' \t', round(loss.item(), 4))
 
         test_data_loader = DataLoader(test_dataset,
                                         batch_size=32,
                                         shuffle=False,
                                     num_workers=3)
-    i, test_batch = next(enumerate(test_data_loader))
-    noisy = test_batch
+
+        net.eval()
+        i, test_batch = next(enumerate(test_data_loader))
+        noisy = test_batch.float()
+        plt.subplot(1,2,1)
+        plt.imshow(noisy[0][0])
+        plt.subplot(1,2,2)
+        plt.imshow(net(noisy[:,1:,::]).detach()[0][0])
+        plt.show()
 
 
 # datasets
@@ -72,4 +80,4 @@ net = net.float()
 
 loss = MSELoss()
 
-fit(net, loss, dataset, 4, batch_size=8)
+fit(net, loss, dataset, 30, batch_size=8)
