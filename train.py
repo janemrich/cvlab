@@ -45,6 +45,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 				writer.add_images("train_prediction_low", Y_[:n, 1:2], global_step=e)
 			
 			bar.inc_progress(len(X))
+		del X, Y, Y_, loss
 
 		bar = progress.Bar("Epoch {}, test".format(e), finish=len(ds_val))
 		net.eval()
@@ -64,4 +65,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			bar.inc_progress(len(X))
 		loss = losses / n_losses
 		writer.add_scalar('Loss/val', losses / n_losses)
+		del X, Y, Y_, loss
+		
 		scheduler.step(loss)
+		
