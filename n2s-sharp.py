@@ -1,52 +1,75 @@
 import sys
 sys.path.append('..')
-from data import N2NDataset
+from data import N2SDataset
+import model
 
 import matplotlib.pyplot as plt
 
+import torch
 from torchvision import transforms
 from torch.nn import MSELoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
-from mask import Masker
-from model import UNet
-
-# TODO data set
-n2s_sharp_train = N2NDataset()
-
-model = UNet()
-
-loss_function = MSELoss()
-optimizer = Adam(model.parameters(), lr=0.001)
-
-dataloader = DataLoader(n2s_sharp_train, batch_size=32, shuffle=True)
+from noise2self.mask import Masker
+import model
 
 
-# training
-for i, batch in enumerate(dataloader):
-    noisy_images, clean_images = batch
+def fit(net, loss_function, dataset, epochs, batch_size=32):
 
-    net_input, mask = masker.mask(noisy_images, i)
-    net_output = model(net_input)
+    train_size = int(0.8 * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
 
-    loss = loss_function(net_output*mask, noisy_images*mask)
+    masker = Masker(width = 4, mode='interpolate')
+    optimizer = Adam(net.parameters(), lr=0.001)
 
-    optimizer.zero_grad()
+    dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    loss.backward()
 
-    optimizer.step()
+    # training
+    for i, batch in enumerate(dataloader):
+        print(i)
+        noisy_images = batch
+        noisy_images = noisy_images.float()
 
-    if i % 10 == 0:
-        print('Loss (', i, ' \t', round(loss.item(), 4))
+        # for now only low input
+        noisy_images = noisy_images[:,:1,::]
+        net_input, mask = masker.mask(noisy_images, i)
+        net_output = net(net_input)
 
-    if i == 100:
-        break
+        loss = loss_function(net_output*mask, noisy_images*mask)
 
-test_data_loader = DataLoader(n2s_sharp_test,
-                                batch_size=32,
-                                shuffle=False,
-                                num_workers=3)
-i, test_batch = next(enumerate(test_data_loader))
-noisy, clean = test_batch
+        optimizer.zero_grad()
+
+        loss.backward()
+
+        optimizer.step()
+
+        if i % 10 == 0:
+            print('Loss (', i, ' \t', round(loss.item(), 4))
+
+        if i == 100:
+            break
+
+        test_data_loader = DataLoader(test_dataset,
+                                        batch_size=32,
+                                        shuffle=False,
+                                    num_workers=3)
+    i, test_batch = next(enumerate(test_data_loader))
+    noisy = test_batch
+
+
+# datasets
+dataset = N2SDataset('data/sharp', target_size=(128, 128))
+
+net = torch.nn.Sequential(
+    model.ResBlock(1, 3, hidden_channels=[32, 32, 32]),
+    #model.ResBlock(2, 3, hidden_channels=[16, 32, 16]),
+model.ResBlock(1, 3, hidden_channels=[32, 32, 32])
+)
+net = net.float()
+
+loss = MSELoss()
+
+fit(net, loss, dataset, 4, batch_size=8)

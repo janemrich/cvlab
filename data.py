@@ -65,6 +65,18 @@ class SmithData():
 		return len(self.paths_grouped)
 
 
+class N2SDataset(SmithData):
+
+	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8):
+		super(N2SDataset, self).__init__(root, invert, crop)
+
+	def __getitem__(self, idx):
+		return super(N2SDataset, self).__getitem__(idx)[:,:100,:100]
+
+	def __len__(self):
+		return super(N2SDataset, self).__len__()
+
+
 class ProDemosaicDataset(SmithData):
 
 	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8):
