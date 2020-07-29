@@ -65,7 +65,8 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			bar.inc_progress(len(X))
 		loss = losses / n_losses
 		writer.add_scalar('Loss/val', losses / n_losses)
-		del X, Y, Y_, loss
 		
 		scheduler.step(loss)
+		
+		del X, Y, Y_, loss
 		
