@@ -87,8 +87,8 @@ class UNet(nn.Module):
 			ConvBlock(n_channels, hidden[0], 3, activation=activation),
 			ConvBlock(hidden[0], hidden[0], 3, activation=activation)
 		)
-		self.down_convs = [Down(i, o) for i, o in zip(hidden[:-1], hidden[1:])]
-		self.up_convs = [UpSkip(i, o, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))]
+		self.down_convs = nn.ModuleList([Down(i, o) for i, o in zip(hidden[:-1], hidden[1:])])
+		self.up_convs = nn.ModuleList([UpSkip(i, o, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))])
 		self.outconv = nn.Conv2d(hidden[0], n_channels, kernel_size=1)
 
 	def forward(self, x):
