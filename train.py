@@ -20,9 +20,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	first_batch = next(iter(loader_test))
 	n = max(len(first_batch), 8)
 	writer.add_images("validation_in_high", first_batch[0][:n, 0:1])
-	# writer.add_images("validation_in_low", first_batch[0][:n, 1:2])
 	writer.add_images("validation_gt_high", first_batch[1][:n, 0:1])
-	# writer.add_images("validation_gt_low", first_batch[1][:n, 1:2])
 	
 	net.to(device)
 
@@ -32,6 +30,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	for e in range(epochs):
 		bar = progress.Bar("Epoch {}, train".format(e), finish=len(ds_train))
 		net.train()
+		first = False
 		for X, Y in loader_train:
 			X, Y = X.to(device), Y.to(device)
 			optimizer.zero_grad()
@@ -40,6 +39,11 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			loss.backward()
 			optimizer.step()
 			writer.add_scalar('Loss/train', loss.item())
+			if not first:
+				first=True
+				writer.add_images("train_prediction_high", Y_[:n, 0:1], global_step=e)
+				writer.add_images("train_prediction_low", Y_[:n, 1:2], global_step=e)
+			
 			bar.inc_progress(len(X))
 
 		bar = progress.Bar("Epoch {}, test".format(e), finish=len(ds_val))
