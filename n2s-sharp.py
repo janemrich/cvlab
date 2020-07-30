@@ -59,13 +59,25 @@ def fit(net, loss_function, dataset, epochs, batch_size=32):
                                     num_workers=3)
 
         net.eval()
-        i, test_batch = next(enumerate(test_data_loader))
-        noisy = test_batch.float()
-        plt.subplot(1,2,1)
-        plt.imshow(noisy[0][0])
-        plt.subplot(1,2,2)
-        plt.imshow(net(noisy[:,1:,::]).detach()[0][0])
-        plt.savefig('n2s.png')
+        plot_val(net, test_data_loader)
+        # i, test_batch = next(enumerate(test_data_loader))
+        # noisy = test_batch.float()
+        # plt.subplot(1,2,1)
+        # plt.imshow(noisy[0][0])
+        # plt.subplot(1,2,2)
+        # plt.imshow(net(noisy[:,1:,::]).detach()[0][0])
+        # plt.savefig('n2s.png')
+
+def plot_val(net, data_loader):
+    i, test_batch = next(enumerate(data_loader))
+    noisy = test_batch.float()
+    denoised = net(noisy[:,1:,::]).detach()
+    for j in range(5):
+        plt.subplot(2,5,j+1)
+        plt.imshow(noisy[j][0])
+        plt.subplot(2,5,5+j+1)
+        plt.imshow(denoised[j][0])
+    plt.savefig('n2s.png')
 
 
 # datasets
@@ -76,8 +88,6 @@ net = torch.nn.Sequential(
     model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
     model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
     model.OutConv(16, 1) 
-    # model.ResBlock(1, 3, padding_mode='reflect', hidden_channels=[32, 32]),
-    # model.ResBlock(1, 3, padding_mode='reflect', hidden_channels=[32, 32])
 )
 net = net.float()
 
