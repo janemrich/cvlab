@@ -12,10 +12,11 @@ import random
 class SmithData():
 	"""Manages access to Smith images dataset format."""
 
-	def __init__(self, root, invert=True, crop=False):
+	def __init__(self, root, invert=True, crop=False, sharp=False):
 		self.root = root
 		self.invert = invert
 		self.crop = crop
+		self.sharp = sharp
 		self.paths_grouped = self.load_grouped_filenames() # [(high, low, rgb), ...]
 		if self.crop:
 			self.compute_masks()
@@ -40,8 +41,10 @@ class SmithData():
 
 	def load_grouped_filenames(self):
 		files = sorted(os.listdir(self.root))
-	
-		return list(zip(files[0::3], files[1::3], files[2::3]))
+		if self.sharp:
+			return list(zip(files[0::5], files[1::5], files[4::5]))
+		else:
+			return list(zip(files[0::3], files[1::3], files[2::3]))
 
 	def __getitem__(self, idx):
 		high = Image.open(os.path.join(self.root, self.paths_grouped[idx][0]))
@@ -68,8 +71,8 @@ class SmithData():
 
 class N2SDataset(SmithData):
 
-	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8):
-		super(N2SDataset, self).__init__(root, invert, crop)
+	def __init__(self, root, target_size, invert=True, crop=True, sharp=False, patches_per_image=8):
+		super(N2SDataset, self).__init__(root, invert, crop, sharp)
 
 	def __getitem__(self, idx):
 		return super(N2SDataset, self).__getitem__(idx)[:,:100,:100]
