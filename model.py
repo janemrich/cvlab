@@ -10,6 +10,38 @@ _activations = {
 	'leakyrelu': torch.nn.LeakyReLU
 }
 
+
+class Sobel(nn.Module):
+	def __init__(self, n_channels):
+		super(Sobel, self).__init__()
+		self.sobel_x = np.array([[[[1, 0, -1],[2,0,-2],[1,0,-1]]] * n_channels])
+		self.sobel_y = np.array([[[[1, 2, 1],[0,0,0],[-1,-2,-1]]] * n_channels])
+		self.conv_x = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+		self.conv_y = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+		self.conv_x.weight=nn.Parameter(torch.from_numpy(self.sobel_x).float())
+		self.conv_y.weight=nn.Parameter(torch.from_numpy(self.sobel_y).float())
+
+	def forward(self, x):
+		G_x=self.conv_x(x)
+		G_y=self.conv_y(x)
+
+		return torch.sqrt(torch.pow(G_x,2)+ torch.pow(G_y,2))
+
+
+class SmoothMSELoss(nn.Module):
+	def __init__(self, n_channels, alpha):
+		super(SmoothMSELoss, self).__init__()
+		self.mse = torch.nn.MSELoss()
+		self.sobel = Sobel(n_channels)
+		self.alpha = 0.5
+	
+	def forward(self, prediction, target):
+		sobel_target = self.sobel(target)
+		sobel_prediction = self.sobel(prediction)
+		smooth = sobel_prediction * torch.exp(-sobel_target) 
+		return self.mse(prediction, target) + 0.5 * torch.mean(smooth)
+
+
 class ConvBlock(nn.Module):
 	def __init__(self, in_channels, out_channels, kernel_size, padding_mode='zeros', activation='relu'):
 		super(ConvBlock, self).__init__()

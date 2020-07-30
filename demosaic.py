@@ -48,7 +48,7 @@ if __name__=="__main__":
 	elif model_name == "unet":
 		net = model.UNet(2, **model_params)
 
-	loss = torch.nn.MSELoss()
+	loss = model.SmoothMSELoss(2, 1.0)
 
 	train_dataset, test_dataset = utils.torch_random_split_frac(dataset, [0.8, 0.2])
 

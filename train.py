@@ -25,7 +25,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	net.to(device)
 
 	optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
-	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=2)
+	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=4)
 
 	for e in range(epochs):
 		bar = progress.Bar("Epoch {}, train".format(e), finish=len(ds_train))
