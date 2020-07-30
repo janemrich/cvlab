@@ -69,7 +69,7 @@ def fit(net, loss_function, dataset, epochs, batch_size=32):
 
 
 # datasets
-dataset = N2SDataset('data/sharp', target_size=(128, 128))
+dataset = N2SDataset('data/sharp', target_size=(128, 128), sharp=True)
 
 net = torch.nn.Sequential(
     model.ConvBlock(1, 16, 3, padding_mode='reflect'),
