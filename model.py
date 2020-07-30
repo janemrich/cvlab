@@ -135,8 +135,9 @@ class UNet(nn.Module):
 		return self.outconv(out)
 
 class ResBlock(nn.Module):
-	def __init__(self, in_channels, kernel_size, padding_mode='zeros', hidden_channels=[], activation='relu', last_layer_activation=False):
+	def __init__(self, in_channels, kernel_size, padding_mode='zeros', hidden_channels=[], activation='relu', last_layer_activation=True):
 		super(ResBlock, self).__init__()
+		self.last_layer_activation = last_layer_activation
 		self.activation = _activations[activation]() if last_layer_activation else None
 		if len(hidden_channels) == 0:
 			hidden_channels = [in_channels]
@@ -149,7 +150,7 @@ class ResBlock(nn.Module):
 		for conv in self.convs:
 			out = conv(out)
 		out = self.conv_out(out)
-		if self.activation is not None:
+		if self.last_layer_activation:
 			out = self.activation(out)
 		return x + out
 

@@ -48,11 +48,12 @@ def fit(net, loss_function, dataset, epochs, batch_size=32):
             loss.backward()
 
             optimizer.step()
-            bar.inc_progress(i)
+            bar.inc_progress(batch_size)
 
-            if i % 10 == 0:
-                print('\nLoss (', i, ' \t', round(loss.item(), 6))
-
+            # if i % 10 == 0:
+        
+        print('\nLoss (', i, ' \t', round(loss.item(), 6))
+   
         test_data_loader = DataLoader(test_dataset,
                                         batch_size=32,
                                         shuffle=False,
@@ -60,22 +61,20 @@ def fit(net, loss_function, dataset, epochs, batch_size=32):
 
         net.eval()
         plot_val(net, test_data_loader)
-        # i, test_batch = next(enumerate(test_data_loader))
-        # noisy = test_batch.float()
-        # plt.subplot(1,2,1)
-        # plt.imshow(noisy[0][0])
-        # plt.subplot(1,2,2)
-        # plt.imshow(net(noisy[:,1:,::]).detach()[0][0])
-        # plt.savefig('n2s.png')
 
 def plot_val(net, data_loader):
     i, test_batch = next(enumerate(data_loader))
     noisy = test_batch.float()
     denoised = net(noisy[:,1:,::]).detach()
-    for j in range(5):
-        plt.subplot(2,5,j+1)
+    n_pics = 5
+    for j in range(n_pics):
+        fig = plt.subplot(2,n_pics,j+1)
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
         plt.imshow(noisy[j][0])
-        plt.subplot(2,5,5+j+1)
+        fig = plt.subplot(2,n_pics,n_pics+j+1)
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
         plt.imshow(denoised[j][0])
     plt.savefig('n2s.png')
 
@@ -83,14 +82,21 @@ def plot_val(net, data_loader):
 # datasets
 dataset = N2SDataset('data/sharp', target_size=(128, 128), sharp=True)
 
-net = torch.nn.Sequential(
+net_full_residual = torch.nn.Sequential(
     model.ConvBlock(1, 16, 3, padding_mode='reflect'),
     model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
     model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
     model.OutConv(16, 1) 
 )
+net_small = torch.nn.Sequential(
+    # model.ConvBlock(1, 16, 3, padding_mode='reflect'),
+    model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32]),
+    model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32], last_layer_activation=False),
+    # model.OutConv(1, 1) 
+)
+net = net_small
 net = net.float()
 
 loss = MSELoss()
 
-fit(net, loss, dataset, 15, batch_size=16)
+fit(net, loss, dataset, 15, batch_size=8)
