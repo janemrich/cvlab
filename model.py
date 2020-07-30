@@ -120,3 +120,17 @@ class ResBlock(nn.Module):
 		if self.activation is not None:
 			out = self.activation(out)
 		return x + out
+
+
+class ResNet(nn.Module):
+	"""Stack multiple resblocks and an in and out convolutiono"""
+	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu'):
+		super(ResNet, self).__init__()
+		self.net = torch.nn.Sequential(
+			*[ConvBlock(i, o, 3, activation=activation) for i, o in zip([in_channels]+in_conv[:-1], in_conv)],
+			*[ResBlock(in_conv[-1], 3, hidden_channels=block, activation=activation) for block in res_blocks],
+			nn.Conv2d(in_conv[-1], in_channels, kernel_size=1)
+		)
+	
+	def forward(self, x):
+		return self.net(x)

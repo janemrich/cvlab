@@ -44,11 +44,7 @@ if __name__=="__main__":
 	model_name = config.get("model", "unet")
 	model_params = config.get("model_params", {})
 	if  model_name == "resnet":
-		net = torch.nn.Sequential(
-			model.ResBlock(2, 3, hidden_channels=[32, 32, 32], last_layer_activation=True),
-			#model.ResBlock(2, 3, hidden_channels=[16, 32, 16]),
-			model.ResBlock(2, 3, hidden_channels=[32, 32, 32])
-		)
+		net = model.ResNet(2, 2, **model_params)
 	elif model_name == "unet":
 		net = model.UNet(2, **model_params)
 
