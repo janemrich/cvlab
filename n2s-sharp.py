@@ -76,6 +76,7 @@ def plot_val(net, data_loader):
         fig.axes.get_xaxis().set_visible(False)
         fig.axes.get_yaxis().set_visible(False)
         plt.imshow(denoised[j][0])
+    plt.subplots_adjust(hspace=0.2)
     plt.savefig('n2s.png')
 
 
@@ -94,9 +95,13 @@ net_small = torch.nn.Sequential(
     model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32], last_layer_activation=False),
     # model.OutConv(1, 1) 
 )
+
+from noise2self.models.babyunet import BabyUnet
+net_babyu = BabyUnet()
+
 net = net_small
 net = net.float()
 
 loss = MSELoss()
 
-fit(net, loss, dataset, 15, batch_size=8)
+fit(net, loss, dataset, 15, batch_size=32)
