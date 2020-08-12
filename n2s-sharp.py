@@ -4,6 +4,8 @@ from data import N2SDataset
 import model
 
 import matplotlib.pyplot as plt
+from argparse import ArgumentParser
+import json
 
 import torch
 from torchvision import transforms
@@ -14,6 +16,28 @@ from torch.utils.data import DataLoader
 from noise2self.mask import Masker
 import model
 import progress
+
+"""
+Config format:
+{
+	model: "res"/",
+	model_params: {},
+	fit: {
+		batch_size: int,
+		epochs: int
+	}
+}
+"""
+
+
+def cli():
+	parser = ArgumentParser()
+	parser.add_argument("data", type=str, help="Root folder of the pro data")
+	parser.add_argument("--config", type=str, nargs="?", default="denoising-default.json", help="path to configuration file for training setup")
+	parser.add_argument("--device", type=str, nargs="?", default="cpu")
+	parser.add_argument("--name", type=str, nargs="?", default=None)
+	
+	return parser.parse_args()	
 
 
 def fit(net, loss_function, dataset, epochs, batch_size=32):
@@ -80,28 +104,35 @@ def plot_val(net, data_loader):
     plt.savefig('n2s.png')
 
 
-# datasets
-dataset = N2SDataset('data/sharp', target_size=(128, 128), sharp=True)
+if __name__=="__main__":
+	args = cli()
+	
+	with open(args.config, 'r') as f:
+		config = json.load(f)
 
-net_full_residual = torch.nn.Sequential(
-    model.ConvBlock(1, 16, 3, padding_mode='reflect'),
-    model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
-    model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
-    model.OutConv(16, 1) 
-)
-net_small = torch.nn.Sequential(
-    # model.ConvBlock(1, 16, 3, padding_mode='reflect'),
-    model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32]),
-    model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32], last_layer_activation=False),
-    # model.OutConv(1, 1) 
-)
+	# datasets
+	dataset = N2SDataset(args.data, sharp=True, **config.get("dataset", {}))
 
-from noise2self.models.babyunet import BabyUnet
-net_babyu = BabyUnet()
+	net_full_residual = torch.nn.Sequential(
+		model.ConvBlock(1, 16, 3, padding_mode='reflect'),
+		model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
+		model.ResBlock(16, 3, padding_mode='reflect', hidden_channels=[32, 32, 32]),
+		model.OutConv(16, 1) 
+	)
+	net_res = torch.nn.Sequential(
+		# model.ConvBlock(1, 16, 3, padding_mode='reflect'),
+		model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32]),
+		model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32], last_layer_activation=False),
+	)
 
-net = net_small
-net = net.float()
+	#from noise2self.models.babyunet import BabyUnet
+	#net_babyu = BabyUnet()
 
-loss = MSELoss()
 
-fit(net, loss, dataset, 15, batch_size=32)
+	if config['model'] == 'res':
+		net = net_res
+	net = net.float()
+
+	loss = MSELoss()
+
+	fit(net, loss, dataset, 15, batch_size=32)
