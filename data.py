@@ -122,7 +122,8 @@ class N2SDataset(SmithData):
 		return images
 
 	def __len__(self):
-		return super(N2SDataset, self).__len__()
+		return super(N2SDataset, self).__len__() * self.patches_per_image
+
 
 
 class ProDemosaicDataset(SmithData):
