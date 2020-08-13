@@ -3,6 +3,7 @@ sys.path.append('..')
 from data import N2SDataset
 import model
 
+import numpy as np
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 import json
@@ -95,11 +96,11 @@ def plot_val(net, data_loader):
         fig = plt.subplot(2,n_pics,j+1)
         fig.axes.get_xaxis().set_visible(False)
         fig.axes.get_yaxis().set_visible(False)
-        plt.imshow(noisy[j][0])
+        plt.imshow(noisy[j][0], cmap='gray')
         fig = plt.subplot(2,n_pics,n_pics+j+1)
         fig.axes.get_xaxis().set_visible(False)
         fig.axes.get_yaxis().set_visible(False)
-        plt.imshow(denoised[j][0])
+        plt.imshow(denoised[j][0], cmap='gray')
     plt.subplots_adjust(hspace=0.2)
     plt.savefig('n2s.png')
 
@@ -122,7 +123,8 @@ if __name__=="__main__":
 	net_res = torch.nn.Sequential(
 		# model.ConvBlock(1, 16, 3, padding_mode='reflect'),
 		model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32]),
-		model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32], last_layer_activation=False),
+		model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32]),
+		#model.ConvBlock(1, 1, 3, padding_mode='reflect', activation='sigmoid'),
 	)
 
 	#from noise2self.models.babyunet import BabyUnet
