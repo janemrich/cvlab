@@ -28,6 +28,7 @@ def cli():
 	parser.add_argument("--config", type=str, nargs="?", default="demosaic-default.json", help="path to configuration file for training setup")
 	parser.add_argument("--device", type=str, nargs="?", default="cpu")
 	parser.add_argument("--name", type=str, nargs="?", default=None)
+	parser.add_argument("--loss", type=str, nargs="?", default='mse')
 	
 	return parser.parse_args()	
 
@@ -43,12 +44,16 @@ if __name__=="__main__":
 
 	model_name = config.get("model", "unet")
 	model_params = config.get("model_params", {})
+	
 	if  model_name == "resnet":
 		net = model.ResNet(2, 2, **model_params)
 	elif model_name == "unet":
 		net = model.UNet(2, **model_params)
 
-	loss = model.SmoothMSELoss(2, 1.0)
+	if args.loss == 'mse':
+		loss = torch.nn.MSELoss()
+	elif args.loss == 'smoothmse':	
+		loss = model.SmoothMSELoss(2, 1.0)
 
 	train_dataset, test_dataset = utils.torch_random_split_frac(dataset, [0.8, 0.2])
 

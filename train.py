@@ -13,16 +13,14 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 
 	ds_train, ds_val = utils.torch_random_split_frac(dataset, [0.9, 0.1])
 
-
 	loader_train = torch.utils.data.DataLoader(ds_train, batch_size=batch_size, shuffle=True)
 	loader_test = torch.utils.data.DataLoader(ds_val, batch_size=batch_size, shuffle=False)
 
 	first_batch = next(iter(loader_test))
 	n = max(len(first_batch), 8)
-	writer.add_images("validation_in_high", first_batch[0][:n, 0:1])
-	writer.add_images("validation_gt_high", first_batch[1][:n, 0:1])
 	
 	net.to(device)
+	criterion.to(device)
 
 	optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=4)
@@ -41,6 +39,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			writer.add_scalar('Loss/train', loss.item())
 			if not first:
 				first=True
+
 				writer.add_images("train_prediction_high", Y_[:n, 0:1], global_step=e)
 				writer.add_images("train_prediction_low", Y_[:n, 1:2], global_step=e)
 			
@@ -58,8 +57,9 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 				Y_ = net(X)
 				if first:
 					first = False
-					writer.add_images("validation_prediction_high", Y_[:n, 0:1], global_step=e)
-					writer.add_images("validation_prediction_low", Y_[:n, 1:2], global_step=e)
+					vis = torch.cat([X[:n], Y_[:n], Y[:n]], dim=-1)
+					writer.add_images("validation_prediction_high", vis[:, 0:1], global_step=e)
+					writer.add_images("validation_prediction_low", vis[:n, 1:2], global_step=e)
 				losses = losses + criterion(Y, Y_).item()
 				n_losses += 1
 				bar.inc_progress(len(X))
@@ -67,5 +67,6 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			writer.add_scalar('Loss/val', losses / n_losses)
 			scheduler.step(loss)
 			
+			utils.evaluate_smithdata(dataset, net, writer.log_dir, device, e)
+
 			del X, Y, Y_, loss, losses
-		
