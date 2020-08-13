@@ -20,6 +20,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	n = max(len(first_batch), 8)
 	
 	net.to(device)
+	criterion.to(device)
 
 	optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=4)

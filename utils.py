@@ -18,14 +18,14 @@ def evaluate_smithdata(dataset, model, resdir, device, step, n_images=2):
 		dataset = dataset.dataset
 	for i in range(n_images):
 		X, Y, RGB = dataset.get_full(i)
-		X, Y = X.unsqueeze(0).to(device), Y.unsqueeze(0).detach().numpy()
+		X, Y = X.unsqueeze(0).to(device), Y.unsqueeze(0).cpu().detach().numpy()
 
 		model.to(device)
 		model.eval()
 
-		Y_ = model(X).detach().numpy()
+		Y_ = model(X).cpu().detach().numpy()
 		
-		comp = np.concatenate([X.detach().numpy(), Y_, Y], axis=-1)
+		comp = np.concatenate([X.cpu().detach().numpy(), Y_, Y], axis=-1)
 	
 		plt.Figure(figsize=(10*n_images, 20))
 		plt.tight_layout(h_pad=0, w_pad=0)
