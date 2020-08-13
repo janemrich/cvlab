@@ -1,0 +1,12 @@
+{
+	"model": "res",
+	"model_params": {
+		"activation": "relu"
+	},
+	"train": {
+		"batch_size": 32
+	},
+	"dataset": {
+		"target_size": [128, 128]
+	}
+}

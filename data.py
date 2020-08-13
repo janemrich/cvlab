@@ -10,7 +10,9 @@ import random
 
 
 class SmithData():
-	"""Manages access to Smith images dataset format."""
+	"""Manages access to Smith images dataset format.
+	sharp: data source are images from sharp machine
+	"""
 
 	def __init__(self, root, invert=True, crop=False, sharp=False):
 		self.root = root
@@ -80,14 +82,57 @@ class SmithData():
 
 class N2SDataset(SmithData):
 
-	def __init__(self, root, target_size, invert=True, crop=True, sharp=False, patches_per_image=8):
+	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, patches_per_image=8, fill_missing='same'):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp)
+		self.patch_rows = target_size[1]
+		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
+		self.patches_per_image = patches_per_image
+		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
+		self.fill_missing=fill_missing
+
+	def create_patches(self, idx, images_shape, patch_shape):
+		"""Creates a list of top left points of random patches for image idx and saves them to patches_positions"""
+		# cut a random patch from the image	
+		shift_row = 0
+		shift_col = 0	
+		
+		diff_row = images_shape[1] - patch_shape[1]
+		diff_col = images_shape[2] - patch_shape[2]
+		
+		positions = []
+		for _ in range(self.patches_per_image):	
+			if diff_row > 0:
+				shift_row = random.randrange(diff_row)
+			if diff_col > 0:
+				shift_col = random.randrange(diff_col)
+			positions.append((shift_row, shift_col))
+		
+		self.patches_positions[idx]= positions
 
 	def __getitem__(self, idx):
-		return super(N2SDataset, self).__getitem__(idx)[:,:100,:100]
+		idx_img = idx // self.patches_per_image
+		idx_patch = idx % self.patches_per_image
+		
+		images = super(N2SDataset, self).__getitem__(idx_img)
+		patch = np.zeros((2, self.patch_rows, self.patch_cols))
+		
+		if len(self.patches_positions[idx_img]) <= idx_patch:
+			# we did not generate the random patch positions for this image yet
+			self.create_patches(idx_img, images.shape, patch.shape) 
+
+		shift_row, shift_col = self.patches_positions[idx_img][idx_patch]
+		# if patch is larger than image in a dimension, we make sure to stay in array range
+		patch = images[:,
+			shift_row:shift_row+patch.shape[1]-min(images.shape[1] - patch.shape[1], 0),
+			shift_col:shift_col+patch.shape[2]-min(images.shape[2] - patch.shape[2], 0)]
+
+		images = torch.tensor(patch[:, :, :-1], dtype=torch.float)
+
+		return images
 
 	def __len__(self):
-		return super(N2SDataset, self).__len__()
+		return super(N2SDataset, self).__len__() * self.patches_per_image
+
 
 
 class ProDemosaicDataset(SmithData):
@@ -157,7 +202,7 @@ class ProDemosaicDataset(SmithData):
 		patch = np.zeros((2, self.patch_rows, self.patch_cols))
 		
 		if len(self.patches_positions[idx_img]) <= idx_patch:
-			# we did not generate the ranndom patch positions for this image yet
+			# we did not generate the random patch positions for this image yet
 			self.create_patches(idx_img, pro.shape, patch.shape) 
 
 		shift_row, shift_col = self.patches_positions[idx_img][idx_patch]
