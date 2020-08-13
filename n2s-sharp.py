@@ -75,7 +75,6 @@ def fit(net, loss_function, dataset, epochs, batch_size=32):
             optimizer.step()
             bar.inc_progress(batch_size)
 
-            # if i % 10 == 0:
         
         print('\nLoss (', i, ' \t', round(loss.item(), 6))
    
@@ -91,18 +90,20 @@ def plot_val(net, data_loader):
     i, test_batch = next(enumerate(data_loader))
     noisy = test_batch.float()
     denoised = net(noisy[:,1:,::]).detach()
+    noisy = noisy[:,1:,::]
+    comp = np.concatenate([noisy, denoised], axis=-2)
+
     n_pics = 5
+    fig = plt.figure(figsize=(3*n_pics, 8))
+    fig.suptitle('channel low, noisy(top) vs denoised(bottom)', fontsize=30)
     for j in range(n_pics):
-        fig = plt.subplot(2,n_pics,j+1)
-        fig.axes.get_xaxis().set_visible(False)
-        fig.axes.get_yaxis().set_visible(False)
-        plt.imshow(noisy[j][0], cmap='gray')
-        fig = plt.subplot(2,n_pics,n_pics+j+1)
-        fig.axes.get_xaxis().set_visible(False)
-        fig.axes.get_yaxis().set_visible(False)
-        plt.imshow(denoised[j][0], cmap='gray')
-    plt.subplots_adjust(hspace=0.2)
-    plt.savefig('n2s.png')
+        ax1 = fig.add_subplot(1,n_pics,j+1)
+        ax1.get_xaxis().set_visible(False)
+        ax1.get_yaxis().set_visible(False)
+        ax1.set_title("image {}".format(j))
+        ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+    plt.savefig('n2s.png', dpi=500)
 
 
 if __name__=="__main__":
@@ -137,4 +138,4 @@ if __name__=="__main__":
 
 	loss = MSELoss()
 
-	fit(net, loss, dataset, 15, batch_size=32)
+	fit(net, loss, dataset, 10, batch_size=32)
