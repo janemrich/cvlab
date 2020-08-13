@@ -64,6 +64,15 @@ class SmithData():
 		else:
 			return arr
 
+	def get_rgb(self, idx):
+		arr = np.array(Image.open(os.path.join(self.root, self.paths_grouped[idx][2])))
+		bbox = self.masks[idx]
+		
+		if self.crop:
+			arr = arr[bbox[0]:bbox[1], bbox[2]:bbox[3]]	
+		
+		return arr
+
 	def __len__(self):
 		return len(self.paths_grouped)
 
@@ -116,6 +125,30 @@ class ProDemosaicDataset(SmithData):
 	def reset_patches(self):
 		self.patches_positions = [[]] * super(ProDemosaicDataset, self).__len__()
 	
+	def gen_sharp(self, patch):
+		if patch.shape[-1] % 2 == 0:
+			patch = patch[:, :, :-1]
+		patch_high = patch[0, :, :-1]
+		patch_low = patch[1, :, 1:]
+
+		sharp = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)*2))
+
+		sharp[0, :, 0::2] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
+		sharp[1, :, 1::2] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
+		
+		if self.fill_missing == 'same':
+			sharp[0, :, 1::2] = sharp[0, :, 0::2]
+			sharp[1, :, 0::2] = sharp[1, :, 1::2]
+
+		elif self.fill_missing == 'interp':
+			raise NotImplementedError
+		
+		else:
+			raise ValueError("Unknown fill value {}".format(self.fill_missing))
+		
+		return sharp
+
+
 	def __getitem__(self, idx):
 		idx_img = idx // self.patches_per_image
 		idx_patch = idx % self.patches_per_image
@@ -133,26 +166,19 @@ class ProDemosaicDataset(SmithData):
 			shift_row:shift_row+patch.shape[1]-min(pro.shape[1] - patch.shape[1], 0),
 			shift_col:shift_col+patch.shape[2]-min(pro.shape[2] - patch.shape[2], 0)]
 
-		patch_high = patch[0, :, :-1]
-		patch_low = patch[1, :, 1:]
-
-		sharp = np.zeros((2, self.patch_rows, self.patch_cols-1))
-
-		sharp[0, :, 0::2] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
-		sharp[1, :, 1::2] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
-		
-		if self.fill_missing == 'same':
-			sharp[0, :, 1::2] = sharp[0, :, 0::2]
-			sharp[1, :, 0::2] = sharp[1, :, 1::2]
-		elif self.fill_missing == 'interp':
-			raise NotImplementedError
-		else:
-			raise ValueError("Unknown fill value {}".format(self.fill_missing))
-		
-		sharp = torch.tensor(sharp, dtype=torch.float)
+		sharp = torch.tensor(self.gen_sharp(patch), dtype=torch.float)
 		pro = torch.tensor(patch[:, :, :-1], dtype=torch.float)
 
 		return sharp, pro
+
+	def get_full(self, idx):
+		"""Does not do patching."""
+		pro = super(ProDemosaicDataset, self).__getitem__(idx)
+		sharp = self.gen_sharp(pro)
+		pro = torch.tensor(pro[:, :, :sharp.shape[-1]], dtype=torch.float)
+		sharp = torch.tensor(sharp, dtype=torch.float)
+
+		return sharp, pro, super(ProDemosaicDataset, self).get_rgb(idx)
 
 	def __len__(self):
 		return super(ProDemosaicDataset, self).__len__() * self.patches_per_image
