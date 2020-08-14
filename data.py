@@ -8,6 +8,36 @@ from matplotlib import image
 import glob
 import random
 
+class RawDataset():
+	"""
+	unaltered access to Smith images dataset format 
+	"""
+
+	def __init__(self, root, sharp=False):
+		self.root = root
+		self.sharp = sharp
+		self.paths_grouped = self.load_grouped_filenames() # [(high, low, rgb, ...)]
+
+	def load_grouped_filenames(self):
+		files = sorted(os.listdir(self.root))
+		if self.sharp:
+			return list(zip(files[0::5], files[1::5], files[4::5]))
+		else:
+			return list(zip(files[0::3], files[1::3], files[2::3]))
+
+	def __getitem__(self, idx):
+		high = Image.open(os.path.join(self.root, self.paths_grouped[idx][0]))
+		low = Image.open(os.path.join(self.root, self.paths_grouped[idx][1]))
+
+		arr = np.stack((np.array(high), np.array(low)), axis=0)
+		return arr
+
+	def get_rgb(self, idx):
+		arr = np.array(Image.open(os.path.join(self.root, self.paths_grouped[idx][2])))
+		return arr
+
+	def __len__(self):
+		return len(self.paths_grouped)
 
 class SmithData():
 	"""Manages access to Smith images dataset format.
