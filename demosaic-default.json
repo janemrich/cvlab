@@ -1,13 +1,13 @@
 {
-	"model": "unet",
+	"model": "resnet",
 	"model_params": {
-		"bilinear": false,
 		"activation": "relu"
 	},
-	"train": {
+	"fit": {
 		"batch_size": 32
 	},
 	"dataset": {
-		"target_size": [128, 128]
+		"target_size": [128, 128],
+		"crop": true
 	}
 }

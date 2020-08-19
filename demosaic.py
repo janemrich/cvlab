@@ -40,7 +40,6 @@ if __name__=="__main__":
 
 	# dataset = N2NDataset('openimages/train', target_size=(400, 400))
 	# dataset = DemosaicingDataset('openimages/train', target_size=(400, 400))
-	dataset = ProDemosaicDataset(args.data, **config.get("dataset", {}))
 
 	model_name = config.get("model", "unet")
 	model_params = config.get("model_params", {})
@@ -54,6 +53,13 @@ if __name__=="__main__":
 		loss = torch.nn.MSELoss()
 	elif args.loss == 'smoothmse':	
 		loss = model.SmoothMSELoss(2, 1.0)
+	
+	dataset = ProDemosaicDataset(args.data, **config.get("dataset", {}))
+
+	pretrain = config.get("pretrain", None)
+	if pretrain is not None:
+		pretrain_dataset = ProDemosaicDataset(pretrain["data"], **pretrain.get("dataset", {}))
+		fit(net, loss, pretrain_dataset, device=args.device, name=args.name, **pretrain.get("fit", {}), pretrain=True)
 
 	train_dataset, test_dataset = utils.torch_random_split_frac(dataset, [0.8, 0.2])
 

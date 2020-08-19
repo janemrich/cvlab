@@ -139,6 +139,9 @@ class N2SDataset(SmithData):
 		
 		self.patches_positions[idx]= positions
 
+	def reset(self):
+		pass
+
 	def __getitem__(self, idx):
 		idx_img = idx // self.patches_per_image
 		idx_patch = idx % self.patches_per_image
@@ -197,7 +200,7 @@ class ProDemosaicDataset(SmithData):
 		
 		self.patches_positions[idx]= positions
 
-	def reset_patches(self):
+	def reset(self):
 		self.patches_positions = [[]] * super(ProDemosaicDataset, self).__len__()
 	
 	def gen_sharp(self, patch):
@@ -285,6 +288,9 @@ class DemosaicingDataset(Dataset):
 		self.mosaic_mask[0::2, 1::2, 1] = 1.0
 		self.mosaic_mask[0::2, 0::2, 2] = 1.0
 
+	def reset(self):
+		pass
+
 	def __getitem__(self, idx):
 		img_path = os.path.join(self.root, self.imgs[idx])
 		img = Image.open(img_path).convert('RGB')
@@ -324,6 +330,9 @@ class DemosaicN2NDataset(Dataset):
 		self.mosaic_mask[1::2, 0::2, 1] = 1.0
 		self.mosaic_mask[0::2, 1::2, 1] = 1.0
 		self.mosaic_mask[0::2, 0::2, 2] = 1.0
+
+	def reset(self):
+		pass
 
 	def __getitem__(self, idx):
 		img_path = os.path.join(self.root, self.imgs[idx])
@@ -367,6 +376,9 @@ class N2NDataset(Dataset):
 
 		self.std = 0.05
 
+	def reset(self):
+		pass
+
 	def __getitem__(self, idx):
 		img_path = os.path.join(self.root, self.imgs[idx])
 		img = Image.open(img_path).convert('RGB')
@@ -382,15 +394,6 @@ class N2NDataset(Dataset):
 
 	def __len__(self):
 		return len(self.imgs)
-
-
-# class N2VDataset(Dataset):
-#     """
-#     CODE PORTED TO PYTORCH FROM https://github.com/juglab/n2v/internals/N2V_DataWrapper.py
-#     """
-
-#     def __init__(self, X, Y, )
-
 
 
 class N2VDataGenerator():

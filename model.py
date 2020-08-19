@@ -157,13 +157,28 @@ class ResBlock(nn.Module):
 
 class ResNet(nn.Module):
 	"""Stack multiple resblocks and an in and out convolutiono"""
-	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu'):
+	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu', full_res=False, last_layer_activation='none'):
 		super(ResNet, self).__init__()
 		self.net = torch.nn.Sequential(
 			*[ConvBlock(i, o, 3, activation=activation) for i, o in zip([in_channels]+in_conv[:-1], in_conv)],
 			*[ResBlock(in_conv[-1], 3, hidden_channels=block, activation=activation) for block in res_blocks],
 			nn.Conv2d(in_conv[-1], in_channels, kernel_size=1)
 		)
+		self.full_res = full_res
+		if last_layer_activation=='none':
+			self.out_activation = None
+		elif last_layer_activation=='sigmoid':
+			self.out_activation = torch.nn.Sigmoid()
+		elif last_layer_activation=='relu':
+			self.out_activation = torch.nn.ReLU()
 	
 	def forward(self, x):
-		return self.net(x)
+		if self.full_res:
+			out = self.net(x) + x
+		else:
+			out = self.net(x)
+		
+		if self.out_activation:
+			return self.out_activation(out)
+		
+		return out

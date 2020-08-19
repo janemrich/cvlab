@@ -7,7 +7,9 @@ import utils
 import os
 from datetime import datetime
 
-def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None):
+def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None, pretrain=False):
+	if pretrain:
+		name = name + "-pre"
 	logdir = os.path.join('runs', name + datetime.now().strftime("_%d%b-%H%M%S")) if name is not None else None
 	writer = SummaryWriter(log_dir=logdir)
 
@@ -24,6 +26,9 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 
 	optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=4)
+
+	valdir = os.path.join(writer.log_dir, "val")
+	os.mkdir(valdir)
 
 	for e in range(epochs):
 		bar = progress.Bar("Epoch {}, train".format(e), finish=len(ds_train))
@@ -67,6 +72,16 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			writer.add_scalar('Loss/val', losses / n_losses)
 			scheduler.step(loss)
 			
-			utils.evaluate_smithdata(dataset, net, writer.log_dir, device, e)
+			utils.evaluate_smithdata(dataset, net, valdir, device, e)
 
 			del X, Y, Y_, loss, losses
+
+		try:	
+			dataset.reset()
+		except:
+			try:
+				dataset.dataset.reset()
+			except:
+				dataset.dataset.datatset.reset()
+
+	return logdir
