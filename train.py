@@ -4,10 +4,11 @@ from PIL import Image, ImageOps
 from torch.utils.tensorboard import SummaryWriter
 import progress
 import utils
+from eval import evaluate_smithdata
 import os
 from datetime import datetime
 
-def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None, pretrain=False):
+def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None, pretrain=False, **kwargs):
 	if pretrain:
 		name = name + "-pre"
 	logdir = os.path.join('runs', name + datetime.now().strftime("_%d%b-%H%M%S")) if name is not None else None
@@ -24,8 +25,14 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	net.to(device)
 	criterion.to(device)
 
-	optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
-	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=4)
+	optimizer_args_default = {'lr': 0.001}
+	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
+	
+	scheduler_args_default = {"patience":1, "cooldown":4}
+	scheduler_args = {k[len("scheduler_"):]: v for k, v in kwargs.items() if k.startswith("scheduler_")}
+	
+	optimizer = torch.optim.Adam(net.parameters(), **{**optimizer_args_default, **optimizer_args})
+	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, **{**scheduler_args_default, **scheduler_args})
 
 	valdir = os.path.join(writer.log_dir, "val")
 	os.mkdir(valdir)
@@ -72,7 +79,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			writer.add_scalar('Loss/val', losses / n_losses)
 			scheduler.step(loss)
 			
-			utils.evaluate_smithdata(dataset, net, valdir, device, e)
+			evaluate_smithdata(dataset, net, valdir, device, e)
 
 			del X, Y, Y_, loss, losses
 
