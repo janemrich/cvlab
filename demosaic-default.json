@@ -8,6 +8,7 @@
 	},
 	"dataset": {
 		"target_size": [128, 128],
-		"crop": true
+		"crop": true,
+		"patches_per_image": 4
 	}
 }

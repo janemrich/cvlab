@@ -1,0 +1,28 @@
+{
+	"model": "resnet",
+	"model_params": {
+		"activation": "relu"
+	},
+	"fit": {
+		"batch_size": 32,
+		"epochs": 5
+	},
+	"dataset": {
+		"target_size": [128, 128],
+		"crop": true,
+		"patches_per_image": 8
+	},
+	"pretrain": {
+		"data": "data/atex-sample",
+		"fit": {
+			"batch_size": 32,
+			"epochs": 3,
+			"optimizer_lr": 0.005
+		},
+		"dataset": {
+			"crop": true,
+			"target_size": [128, 128],
+			"has_rgb": false
+		}
+	}
+}
