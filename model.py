@@ -25,21 +25,21 @@ class Sobel(nn.Module):
 		G_x=self.conv_x(x)
 		G_y=self.conv_y(x)
 
-		return torch.sqrt(torch.pow(G_x,2)+ torch.pow(G_y,2))
+		return torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
 
 
 class SmoothMSELoss(nn.Module):
-	def __init__(self, n_channels, alpha):
+	def __init__(self, n_channels, alpha=0.1):
 		super(SmoothMSELoss, self).__init__()
 		self.mse = torch.nn.MSELoss()
 		self.sobel = Sobel(n_channels)
-		self.alpha = 0.5
+		self.alpha = alpha
 	
 	def forward(self, prediction, target):
 		sobel_target = self.sobel(target)
 		sobel_prediction = self.sobel(prediction)
 		smooth = sobel_prediction * torch.exp(-sobel_target) 
-		return self.mse(prediction, target) + 0.5 * torch.mean(smooth)
+		return self.mse(prediction, target) + self.alpha * torch.mean(smooth)
 
 
 class ConvBlock(nn.Module):
