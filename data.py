@@ -7,6 +7,7 @@ import tifffile
 from matplotlib import image
 import glob
 import random
+import utils
 
 class RawDataset():
 	"""
@@ -44,23 +45,40 @@ class SmithData():
 	sharp: data source are images from sharp machine
 	"""
 
-	def __init__(self, root, invert=True, crop=False, sharp=False):
+	def __init__(self, root, invert=True, crop=False, sharp=False, has_rgb=True):
 		self.root = root
+		self.has_rgb = has_rgb
 		self.invert = invert
 		self.crop = crop
 		self.sharp = sharp
 		self.paths_grouped = self.load_grouped_filenames() # [(high, low, rgb), ...]
+		self.remove_plain_pgm()
 		if self.crop:
 			self.compute_masks()
 
+	def remove_plain_pgm(self):
+		invalid = []
+		for i, p in enumerate(self.paths_grouped):
+			if p[0].split('.')[1] == 'pgm':
+				with open(os.path.join(self.root, p[0]), 'rb') as f:
+					if f.readline()  != b'P5\n':
+						invalid.insert(0, i)
+		for i in invalid:
+			del self.paths_grouped[i]
+
 	def compute_masks(self):
-		t_row = 4.5
-		t_col = 7.0
+		t_row = 5.5
+		t_col = 7.5
 		self.masks = []
 		max_height = 0
 		max_width = 0
 		for path in self.paths_grouped:
-			arr = np.array(Image.open(os.path.join(self.root, path[0]))) # use high image to calculate masking box
+			im_path = os.path.join(self.root, path[0])
+			if im_path.split('.')[1] == 'pgm':
+				arr = utils.read_pgm(im_path)
+			else:
+				arr = np.array(Image.open(im_path)) # use high image to calculate masking box
+			
 			arr_i = 1.0 - (arr / 65535)
 			hist_row = np.where(np.sum(arr_i, axis=1) > t_row)
 			hist_col = np.where(np.sum(arr_i, axis=0) > t_col)
@@ -75,18 +93,31 @@ class SmithData():
 		files = sorted(os.listdir(self.root))
 		if self.sharp:
 			return list(zip(files[0::5], files[1::5], files[4::5]))
-		else:
+		elif self.has_rgb:
 			return list(zip(files[0::3], files[1::3], files[2::3]))
+		else: # only high and low
+			return list(zip(files[0::2], files[1::2]))
 
 	def __getitem__(self, idx):
-		high = Image.open(os.path.join(self.root, self.paths_grouped[idx][0]))
-		low = Image.open(os.path.join(self.root, self.paths_grouped[idx][1]))
+		high_path = os.path.join(self.root, self.paths_grouped[idx][0])
+		low_path = os.path.join(self.root, self.paths_grouped[idx][1])
+		
+		if high_path.split('.')[1] == 'pgm':
+			high = utils.read_pgm(high_path)
+			low = utils.read_pgm(low_path)
+		else:
+			high = np.array(Image.open(high_path)) # use high image to calculate masking box
+			low = np.array(Image.open(low_path)) # use high image to calculate masking box
+		
 		bbox = self.masks[idx]
 
-		arr = np.stack((np.array(high), np.array(low)), axis=0)
+		arr = np.stack((high, low), axis=0)
 
-		# normalize to 0-1 range
-		arr = arr / 65535.0
+		if np.max(arr) < 256:
+			arr = arr / 256
+		else:
+			# normalize to 0-1 range
+			arr = arr / 65535.0
 
 		if self.crop:
 			arr = arr[:, bbox[0]:bbox[1], bbox[2]:bbox[3]]	
@@ -173,29 +204,35 @@ class ProDemosaicDataset(SmithData):
 		Args:
 			fill_missing: 'zero', 'same' or 'interp'
 	"""
-	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, fill_missing='same'):
-		super(ProDemosaicDataset, self).__init__(root, invert, crop)
+	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, fill_missing='same', has_rgb=True):
+		super(ProDemosaicDataset, self).__init__(root, invert, crop, has_rgb=has_rgb)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
 		self.patches_per_image = patches_per_image
 		self.patches_positions = [[]] * super(ProDemosaicDataset, self).__len__()
 		self.fill_missing=fill_missing
 
-	def create_patches(self, idx, pro_shape, patch_shape):
+	def create_patches(self, idx, pro, patch_shape):
 		"""Creates a list of top left points of random patches for image idx and saves them to patches_positions"""
 		# cut a random patch from the image	
 		shift_row = 0
 		shift_col = 0	
-		
+		pro_shape = pro.shape
+
 		diff_row = pro_shape[1] - patch_shape[1]
 		diff_col = pro_shape[2] - patch_shape[2]
 		
 		positions = []
-		for _ in range(self.patches_per_image):	
+		fail_count = 0
+		max_fails = 10
+		while len(positions) < self.patches_per_image:	
 			if diff_row > 0:
 				shift_row = random.randrange(diff_row)
 			if diff_col > 0:
 				shift_col = random.randrange(diff_col)
+			if np.mean(pro[0, shift_row:shift_row+patch_shape[0], shift_col:shift_col+patch_shape[1]]) < 0.1 and fail_count < max_fails:
+				fail_count += 1
+				continue
 			positions.append((shift_row, shift_col))
 		
 		self.patches_positions[idx]= positions
@@ -236,7 +273,7 @@ class ProDemosaicDataset(SmithData):
 		
 		if len(self.patches_positions[idx_img]) <= idx_patch:
 			# we did not generate the random patch positions for this image yet
-			self.create_patches(idx_img, pro.shape, patch.shape) 
+			self.create_patches(idx_img, pro, patch.shape) 
 
 		shift_row, shift_col = self.patches_positions[idx_img][idx_patch]
 		# if patch is larger than image in a dimension, we make sure to stay in array range
