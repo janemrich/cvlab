@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 import json
 from train import fit
 import utils
+import shutil
 
 """
 Config format:
@@ -28,7 +29,6 @@ def cli():
 	parser.add_argument("--config", type=str, nargs="?", default="demosaic-default.json", help="path to configuration file for training setup")
 	parser.add_argument("--device", type=str, nargs="?", default="cpu")
 	parser.add_argument("--name", type=str, nargs="?", default=None)
-	parser.add_argument("--loss", type=str, nargs="?", default='mse')
 	
 	return parser.parse_args()	
 
@@ -49,9 +49,10 @@ if __name__=="__main__":
 	elif model_name == "unet":
 		net = model.UNet(2, **model_params)
 
-	if args.loss == 'mse':
+	loss_fun = config.get("loss", "mse")
+	if loss_fun == 'mse':
 		loss = torch.nn.MSELoss()
-	elif args.loss == 'smoothmse':	
+	elif loss_fun == 'smoothmse':	
 		loss = model.SmoothMSELoss(2, 1.0)
 	
 	dataset = ProDemosaicDataset(args.data, **config.get("dataset", {}))
@@ -61,6 +62,9 @@ if __name__=="__main__":
 		pretrain_dataset = ProDemosaicDataset(pretrain["data"], **pretrain.get("dataset", {}))
 		fit(net, loss, pretrain_dataset, device=args.device, name=args.name, **pretrain.get("fit", {}), pretrain=True)
 
-	train_dataset, test_dataset = utils.torch_random_split_frac(dataset, [0.8, 0.2])
+	test_frac = config.get("test_frac", 0.1)
+	train_dataset, test_dataset = utils.torch_random_split_frac(dataset, [1.0-test_frac, test_frac])
 
-	fit(net, loss, train_dataset, device=args.device, name=args.name, **config.get("fit", {}))
+	resdir = fit(net, loss, train_dataset, device=args.device, name=args.name, **config.get("fit", {}))
+
+	shutil.copyfile(args.config, os.path.join(resdir, os.path.basename(args.config)))
