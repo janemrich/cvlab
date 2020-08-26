@@ -1,5 +1,5 @@
 {
-	"model": "res",
+	"model": "babyu",
 	"model_params": {
 		"activation": "relu"
 	},

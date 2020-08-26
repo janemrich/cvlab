@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.modules import ConvBlock
+from noise2self.models.modules import ConvBlock
 
 
 class BabyUnet(nn.Module):
