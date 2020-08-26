@@ -151,6 +151,9 @@ class N2SDataset(SmithData):
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 		self.drop_background = drop_background
 
+	def test():
+		self.test = True
+
 
 	def create_patches(self, idx, image, images_shape, patch_shape):
 		"""Creates a list of top left points of random patches for image idx and saves them to patches_positions"""
@@ -164,6 +167,10 @@ class N2SDataset(SmithData):
 		positions = []
 		fail_count = 0
 		max_fails = 10
+
+		# get same patches in test mode
+		if self.test:
+			random.seed(42)
 		while len(positions) < self.patches_per_image:	
 			if diff_row > 0:
 				shift_row = random.randrange(diff_row)

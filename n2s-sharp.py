@@ -45,12 +45,15 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu'):
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
-	train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+	print(torch.__version__)
+
+	train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
 
 	masker = Masker(width = 4, mode='interpolate')
 	optimizer = Adam(net.parameters(), lr=0.001)
 
 	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+	test_data_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=3)
 
 	net.to(device)
 	loss_function.to(device)
@@ -81,10 +84,6 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu'):
 		
 		print('\nLoss (', i, ' \t', round(loss.item(), 6))
    
-		test_data_loader = DataLoader(test_dataset,
-										batch_size=32,
-										shuffle=False,
-									num_workers=3)
 
 		net.eval()
 		plot_val(net, test_data_loader, device)
