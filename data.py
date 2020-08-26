@@ -143,15 +143,16 @@ class SmithData():
 
 class N2SDataset(SmithData):
 
-	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, patches_per_image=8, fill_missing='same'):
+	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
 		self.patches_per_image = patches_per_image
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
-		self.fill_missing=fill_missing
+		self.drop_background = drop_background
 
-	def create_patches(self, idx, images_shape, patch_shape):
+
+	def create_patches(self, idx, image, images_shape, patch_shape):
 		"""Creates a list of top left points of random patches for image idx and saves them to patches_positions"""
 		# cut a random patch from the image	
 		shift_row = 0
@@ -161,17 +162,22 @@ class N2SDataset(SmithData):
 		diff_col = images_shape[2] - patch_shape[2]
 		
 		positions = []
-		for _ in range(self.patches_per_image):	
+		fail_count = 0
+		max_fails = 10
+		while len(positions) < self.patches_per_image:	
 			if diff_row > 0:
 				shift_row = random.randrange(diff_row)
 			if diff_col > 0:
 				shift_col = random.randrange(diff_col)
+			if self.drop_background and np.mean(image[0, shift_row:shift_row+patch_shape[0], shift_col:shift_col+patch_shape[1]]) < 0.1 and fail_count < max_fails:
+				fail_count += 1
+				continue
 			positions.append((shift_row, shift_col))
 		
 		self.patches_positions[idx]= positions
 
 	def reset(self):
-		pass
+		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 
 	def __getitem__(self, idx):
 		idx_img = idx // self.patches_per_image
@@ -182,7 +188,7 @@ class N2SDataset(SmithData):
 		
 		if len(self.patches_positions[idx_img]) <= idx_patch:
 			# we did not generate the random patch positions for this image yet
-			self.create_patches(idx_img, images.shape, patch.shape) 
+			self.create_patches(idx_img, images, images.shape, patch.shape) 
 
 		shift_row, shift_col = self.patches_positions[idx_img][idx_patch]
 		# if patch is larger than image in a dimension, we make sure to stay in array range

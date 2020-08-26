@@ -147,8 +147,4 @@ if __name__=="__main__":
 
 	loss = MSELoss()
 
-<<<<<<< HEAD
 	fit(net, loss, dataset, config['train']['epochs'], batch_size=config['train']['batch_size'], device=args.device)
-=======
-	fit(net, loss, dataset, 10, batch_size=32, device=args.device)
->>>>>>> a459f1ae41fb44f3261057fb283f5ee2abf2822a
