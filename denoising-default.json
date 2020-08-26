@@ -4,7 +4,8 @@
 		"activation": "relu"
 	},
 	"train": {
-		"batch_size": 32
+		"batch_size": 32,
+		"epochs": 10
 	},
 	"dataset": {
 		"target_size": [128, 128]

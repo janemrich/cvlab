@@ -87,13 +87,15 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu'):
 									num_workers=3)
 
 		net.eval()
-		plot_val(net, test_data_loader)
+		plot_val(net, test_data_loader, device)
 
-def plot_val(net, data_loader):
+def plot_val(net, data_loader, device):
 	i, test_batch = next(enumerate(data_loader))
-	noisy = test_batch.float()
+	noisy = test_batch.to(device)
+	noisy = noisy.float()
 	denoised = net(noisy[:,1:,::]).detach()
 	noisy = noisy[:,1:,::]
+	noisy, denoised = noisy.cpu(), denoised.cpu()
 	comp = np.concatenate([noisy, denoised], axis=-2)
 
 	n_pics = 5
@@ -145,4 +147,8 @@ if __name__=="__main__":
 
 	loss = MSELoss()
 
+<<<<<<< HEAD
 	fit(net, loss, dataset, config['train']['epochs'], batch_size=config['train']['batch_size'], device=args.device)
+=======
+	fit(net, loss, dataset, 10, batch_size=32, device=args.device)
+>>>>>>> a459f1ae41fb44f3261057fb283f5ee2abf2822a
