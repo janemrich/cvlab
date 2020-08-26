@@ -23,7 +23,7 @@ Config format:
 {
 	model: "res"/",
 	model_params: {},
-	fit: {
+	train: {
 		batch_size: int,
 		epochs: int
 	}
@@ -137,7 +137,7 @@ if __name__=="__main__":
 		net = Unet()
 	if model_type == 'dncnn':
 		from noise2self.models.dncnn import DnCNN
-		net = DnCNN(16) # number of channels
+		net = DnCNN(1) # number of channels
 	if model_type == 'simple_res':
 		net = simple_res_net
 
@@ -145,4 +145,4 @@ if __name__=="__main__":
 
 	loss = MSELoss()
 
-	fit(net, loss, dataset, 10, batch_size=32, device=args.device)
+	fit(net, loss, dataset, config['train']['epochs'], batch_size=config['train']['batch_size'], device=args.device)
