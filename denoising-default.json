@@ -5,7 +5,8 @@
 	},
 	"train": {
 		"batch_size": 32,
-		"epochs": 10
+		"epochs": 10,
+		"mask_grid_size": 4
 	},
 	"dataset": {
 		"target_size": [128, 128],

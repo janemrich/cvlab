@@ -41,14 +41,14 @@ def cli():
 	return parser.parse_args()	
 
 
-def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu'):
+def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_grid_size=4):
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
 
 	train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
 
-	masker = Masker(width = 4, mode='interpolate')
+	masker = Masker(width = mask_grid_size, mode='interpolate')
 	optimizer = Adam(net.parameters(), lr=0.001)
 
 	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -148,4 +148,11 @@ if __name__=="__main__":
 
 	loss = MSELoss()
 
-	fit(net, loss, dataset, config['train']['epochs'], batch_size=config['train']['batch_size'], device=args.device)
+	fit(net,
+		loss,
+		dataset,
+		config['train']['epochs'],
+		batch_size=config['train']['batch_size'],
+		device=args.device,
+		mask_grid_size=config['train']['mask_grid_size']
+		)
