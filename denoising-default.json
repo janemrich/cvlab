@@ -11,6 +11,7 @@
 	},
 	"dataset": {
 		"target_size": [128, 128],
-		"drop_background": "True"
+		"drop_background": "False",
+		"complete_background_noise": "True"
 	}
 }

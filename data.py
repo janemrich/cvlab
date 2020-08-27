@@ -14,10 +14,11 @@ class RawDataset():
 	unaltered access to Smith images dataset format 
 	"""
 
-	def __init__(self, root, sharp=False):
+	def __init__(self, root, sharp=False, complete_background_noise=False):
 		self.root = root
 		self.sharp = sharp
 		self.paths_grouped = self.load_grouped_filenames() # [(high, low, rgb, ...)]
+		self.complete_background_noise = complete_background_noise
 
 	def load_grouped_filenames(self):
 		files = sorted(os.listdir(self.root))
@@ -31,6 +32,20 @@ class RawDataset():
 		low = Image.open(os.path.join(self.root, self.paths_grouped[idx][1]))
 
 		arr = np.stack((np.array(high), np.array(low)), axis=0)
+
+		if self.complete_background_noise:
+			maxval = 65535
+			offset = 10
+			black_mask = np.nonzero(arr >= (maxval-offset))
+			random_background = np.abs(np.random.normal(0, scale=700, size=arr.shape)) + maxval - offset
+			arr[black_mask] = random_background[black_mask]
+
+			minval = 0
+			offset = 10
+			white_mask = np.nonzero((arr) <= (minval+offset))
+			random_background = (- np.abs(np.random.normal(0, scale=30, size=arr.shape))) + offset + 1
+			arr[white_mask] = random_background[white_mask]
+
 		return arr
 
 	def get_rgb(self, idx):
@@ -45,7 +60,7 @@ class SmithData():
 	sharp: data source are images from sharp machine
 	"""
 
-	def __init__(self, root, invert=True, crop=False, sharp=False, has_rgb=True):
+	def __init__(self, root, invert=True, crop=False, sharp=False, has_rgb=True, complete_background_noise=False):
 		self.root = root
 		self.has_rgb = has_rgb
 		self.invert = invert
@@ -55,6 +70,7 @@ class SmithData():
 		self.remove_plain_pgm()
 		if self.crop:
 			self.compute_masks()
+		self.complete_background_noise = complete_background_noise
 
 	def remove_plain_pgm(self):
 		invalid = []
@@ -113,6 +129,19 @@ class SmithData():
 
 		arr = np.stack((high, low), axis=0)
 
+		if self.complete_background_noise:
+			maxval = 65535
+			offset = 10
+			black_mask = np.nonzero(arr >= (maxval-offset))
+			random_background = np.abs(np.random.normal(0, scale=700, size=arr.shape)) + maxval - offset
+			arr[black_mask] = random_background[black_mask]
+
+			minval = 0
+			offset = 10
+			white_mask = np.nonzero((arr) <= (minval+offset))
+			random_background = (- np.abs(np.random.normal(0, scale=30, size=arr.shape))) + offset + 1
+			arr[white_mask] = random_background[white_mask]
+
 		if np.max(arr) < 256:
 			arr = arr / 256
 		else:
@@ -143,8 +172,8 @@ class SmithData():
 
 class N2SDataset(SmithData):
 
-	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8):
-		super(N2SDataset, self).__init__(root, invert, crop, sharp)
+	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8, complete_background_noise=False):
+		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
 		self.patches_per_image = patches_per_image
