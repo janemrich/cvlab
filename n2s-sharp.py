@@ -49,7 +49,9 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 	train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
 
 	masker = Masker(width = mask_grid_size, mode='interpolate')
-	optimizer = Adam(net.parameters(), lr=0.001)
+	lr = 0.0001
+	lr = lr * mask_grid_size**2 # adapt learning rate to grid size
+	optimizer = Adam(net.parameters(), lr=lr)
 
 	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 	test_data_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=3)
