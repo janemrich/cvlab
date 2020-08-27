@@ -2,7 +2,7 @@ import torch.nn as nn
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, dropout=False, norm='batch', residual=True, activation='leakyrelu', transpose=False):
+    def __init__(self, in_channels, out_channels, dropout=False, norm='batch', residual=True, activation='leakyrelu', transpose=False, padding_mode='reflect'):
         super(ConvBlock, self).__init__()
         self.dropout = dropout
         self.residual = residual
@@ -29,8 +29,8 @@ class ConvBlock(nn.Module):
             self.conv1 = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, padding=1)
             self.conv2 = nn.ConvTranspose2d(out_channels, out_channels, kernel_size=3, padding=1)
         else:
-            self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
-            self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+            self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, padding_mode=padding_mode)
+            self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, padding_mode=padding_mode)
 
         if self.activation == 'relu':
             self.actfun1 = nn.ReLU()

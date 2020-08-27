@@ -1,5 +1,5 @@
 {
-	"model": "babyu",
+	"model": "n2s-babyu",
 	"model_params": {
 		"activation": "relu"
 	},

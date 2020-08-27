@@ -45,7 +45,6 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu'):
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
-	print(torch.__version__)
 
 	train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
 
@@ -58,6 +57,7 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu'):
 	net.to(device)
 	loss_function.to(device)
 
+	plot_val(net, test_data_loader, device, 0)
 
 	# training
 	for e in range(epochs):
@@ -86,9 +86,9 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu'):
    
 
 		net.eval()
-		plot_val(net, test_data_loader, device)
+		plot_val(net, test_data_loader, device, e)
 
-def plot_val(net, data_loader, device):
+def plot_val(net, data_loader, device, e):
 	i, test_batch = next(enumerate(data_loader))
 	noisy = test_batch.to(device)
 	noisy = noisy.float()
@@ -107,7 +107,7 @@ def plot_val(net, data_loader, device):
 		ax1.set_title("image {}".format(j))
 		ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
 
-	plt.savefig('n2s.png', dpi=500)
+	plt.savefig('n2s_epoch' + str(e) + '.png', dpi=300)
 
 
 if __name__=="__main__":
@@ -130,13 +130,13 @@ if __name__=="__main__":
 	if model_type == 'res':
 		from model import ResNet
 		net = ResNet(1, 1) # in, out channels
-	if model_type == 'babyu':
+	if model_type == 'n2s-babyu':
 		from noise2self.models.babyunet import BabyUnet
 		net = BabyUnet()
-	if model_type == 'unet':
+	if model_type == 'n2s-unet':
 		from noise2self.models.unet import Unet
 		net = Unet()
-	if model_type == 'dncnn':
+	if model_type == 'n2s-dncnn':
 		from noise2self.models.dncnn import DnCNN
 		net = DnCNN(1) # number of channels
 	if model_type == 'simple_res':
