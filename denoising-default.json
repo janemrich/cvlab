@@ -1,5 +1,5 @@
 {
-	"model": "n2s-babyu",
+	"model": "resnet",
 	"model_params": {
 		"activation": "relu"
 	},
