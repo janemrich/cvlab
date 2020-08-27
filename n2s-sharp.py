@@ -41,7 +41,7 @@ def cli():
 	return parser.parse_args()	
 
 
-def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_grid_size=4):
+def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=1000):
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
@@ -49,9 +49,7 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 	train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
 
 	masker = Masker(width = mask_grid_size, mode='interpolate')
-	lr = 0.0001
-	lr = lr * mask_grid_size**2 # adapt learning rate to grid size
-	optimizer = Adam(net.parameters(), lr=lr)
+	optimizer = Adam(net.parameters(), lr=0.001)
 
 	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 	test_data_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=3)
@@ -74,7 +72,10 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 			net_input, mask = masker.mask(noisy_images, i)
 			net_output = net(net_input)
 
-			loss = loss_function(net_output*mask, noisy_images*mask)
+			fade = transforms.Lambda(lambda x: fading_loss(x, threshold_from_end=fade_threshold))
+			fade_factor = fade(noisy_images*mask)
+
+			loss = loss_function(net_output*mask, noisy_images*mask*fade_factor)
 
 			optimizer.zero_grad()
 
@@ -114,7 +115,23 @@ def plot_val(net, data_loader, device, e):
 	plt.savefig('n2s_epoch' + str(e) + '.png', dpi=300)
 
 
+def fading_loss(x, threshold_from_end=1000, maxvalue=65535.0):
+	"""
+	creates fading factor that fades out linearly from 1 at threshold to 0 at maxvalue
+	"""
+	mask = x < (maxvalue - threshold_from_end)
+	x =  1.0 - ((x - torch.full_like(x, maxvalue - threshold_from_end)) / threshold_from_end)
+	x[mask] = 1.0
+	return x
+	# simple python version
+	# if x > (maxvalue - start):
+	# if x < 0:	# if x 		# return (-(x - maxvalue)) / start
+	# else:
+		# return 1
+
+
 if __name__=="__main__":
+	fading_loss(torch.tensor([65035.0, 0.0, 1000.0, 65535.0]))
 	args = cli()
 	
 	with open(args.config, 'r') as f:
@@ -156,5 +173,6 @@ if __name__=="__main__":
 		config['train']['epochs'],
 		batch_size=config['train']['batch_size'],
 		device=args.device,
-		mask_grid_size=config['train']['mask_grid_size']
+		mask_grid_size=config['train']['mask_grid_size'],
+		fade_threshold=config['train']['fade_threshold']
 		)

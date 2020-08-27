@@ -6,7 +6,8 @@
 	"train": {
 		"batch_size": 32,
 		"epochs": 10,
-		"mask_grid_size": 4
+		"mask_grid_size": 4,
+		"fade_threshold": 1000
 	},
 	"dataset": {
 		"target_size": [128, 128],
