@@ -119,6 +119,9 @@ def fading_loss(x, threshold_from_end=1000, maxvalue=65535.0):
 	"""
 	creates fading factor that fades out linearly from 1 at threshold to 0 at maxvalue
 	"""
+	if threshold_from_end == 0:
+		return torch.full_like(x, 1.0)
+
 	mask = x < (maxvalue - threshold_from_end)
 	x =  1.0 - ((x - torch.full_like(x, maxvalue - threshold_from_end)) / threshold_from_end)
 	x[mask] = 1.0
@@ -131,7 +134,6 @@ def fading_loss(x, threshold_from_end=1000, maxvalue=65535.0):
 
 
 if __name__=="__main__":
-	fading_loss(torch.tensor([65035.0, 0.0, 1000.0, 65535.0]))
 	args = cli()
 	
 	with open(args.config, 'r') as f:
