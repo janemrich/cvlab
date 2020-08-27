@@ -86,7 +86,7 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 
 		
 		print('\nLoss (', i, ' \t', round(loss.item(), 6))
-		with open('loss.txt', 'w') as f:
+		with open('loss.txt', 'a') as f:
 			print(e, round(loss.item(), 6), '\n', file=f)
    
 
