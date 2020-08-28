@@ -152,13 +152,13 @@ if __name__=="__main__":
 	model_type = config['model']
 	if model_type == 'resnet':
 		from model import ResNet
-		net = ResNet(1, 1, padding_mode='reflect') # in, out channels
+		net = ResNet(1, 1, **config.get("model_params", {}))# in, out channels
 	if model_type == 'n2s-babyu':
 		from noise2self.models.babyunet import BabyUnet
 		net = BabyUnet()
 	if model_type == 'n2s-unet':
 		from noise2self.models.unet import Unet
-		net = Unet()
+		net = Unet(**config.get("model_params", {}))
 	if model_type == 'n2s-dncnn':
 		from noise2self.models.dncnn import DnCNN
 		net = DnCNN(1) # number of channels
