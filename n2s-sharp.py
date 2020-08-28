@@ -41,7 +41,7 @@ def cli():
 	return parser.parse_args()	
 
 
-def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=1000):
+def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2):
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
@@ -57,7 +57,7 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 	net.to(device)
 	loss_function.to(device)
 
-	plot_val(net, test_data_loader, device, 0)
+	plot_val(net, test_data_loader, device, 0, channels)
 
 	# training
 	for e in range(epochs):
@@ -68,7 +68,7 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 			noisy_images = noisy_images.float()
 
 			# for now only low input
-			noisy_images = noisy_images[:,:1,::]
+			noisy_images = noisy_images[:,:channels,::]
 			net_input, mask = masker.mask(noisy_images, i)
 			net_output = net(net_input)
 
@@ -87,25 +87,34 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 		
 		print('\nLoss (', i, ' \t', round(loss.item(), 6))
 		with open('loss.txt', 'a') as f:
-			print(e, round(loss.item(), 6), '\n', file=f)
+			print(e, '{:.10f}'.format(loss.item()), file=f)
    
 
 		net.eval()
-		plot_val(net, test_data_loader, device, e)
+		plot_val(net, test_data_loader, device, e, channels)
 
-def plot_val(net, data_loader, device, e):
+def plot_val(net, data_loader, device, e, channels):
 	i, test_batch = next(enumerate(data_loader))
 	noisy = test_batch.to(device)
 	noisy = noisy.float()
-	denoised = net(noisy[:,1:,::]).detach()
-	noisy = noisy[:,1:,::]
+	denoised = net(noisy[:,:channels,::]).detach()
+	noisy = noisy[:,:channels,::]
 	noisy, denoised = noisy.cpu(), denoised.cpu()
 	comp = np.concatenate([noisy, denoised], axis=-2)
+	if channels == 2:
+		comp = np.concatenate([comp[:,:1,:,:], comp[:,1:,:,:]], axis=-1)
 
-	n_pics = 5
-	fig = plt.figure(figsize=(3*n_pics, 8))
-	fig.suptitle('channel low, noisy(top) vs denoised(bottom)', fontsize=30)
+	n_pics = 3
+	fig = plt.figure(figsize=(6*n_pics, 7))
+	#fig.suptitle('channel low, noisy(top) vs denoised(bottom)', fontsize=30)
 	for j in range(n_pics):
+		# define images to show
+		if j == 0:
+			k = 3
+		if j == 2:
+			k = 4
+		else:
+			k = j
 		ax1 = fig.add_subplot(1,n_pics,j+1)
 		ax1.get_xaxis().set_visible(False)
 		ax1.get_yaxis().set_visible(False)
@@ -139,6 +148,8 @@ if __name__=="__main__":
 	with open(args.config, 'r') as f:
 		config = json.load(f)
 
+	channels = config['channels']
+
 	# datasets
 	dataset = N2SDataset(args.data, sharp=True, **config.get("dataset", {}))
 
@@ -152,16 +163,16 @@ if __name__=="__main__":
 	model_type = config['model']
 	if model_type == 'resnet':
 		from model import ResNet
-		net = ResNet(1, 1, **config.get("model_params", {}))# in, out channels
+		net = ResNet(channels, channels, **config.get("model_params", {}))# in, out channels
 	if model_type == 'n2s-babyu':
 		from noise2self.models.babyunet import BabyUnet
-		net = BabyUnet()
+		net = BabyUnet(channels, channels)
 	if model_type == 'n2s-unet':
 		from noise2self.models.unet import Unet
 		net = Unet(**config.get("model_params", {}))
 	if model_type == 'n2s-dncnn':
 		from noise2self.models.dncnn import DnCNN
-		net = DnCNN(1) # number of channels
+		net = DnCNN(channels) # number of channels
 	if model_type == 'simple_res':
 		net = simple_res_net
 
@@ -176,5 +187,6 @@ if __name__=="__main__":
 		batch_size=config['train']['batch_size'],
 		device=args.device,
 		mask_grid_size=config['train']['mask_grid_size'],
-		fade_threshold=config['train']['fade_threshold']
+		fade_threshold=config['train']['fade_threshold'],
+		channels=channels
 		)

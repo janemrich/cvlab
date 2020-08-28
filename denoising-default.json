@@ -1,8 +1,9 @@
 {
-	"model": "resnet",
+	"model": "n2s-babyu",
 	"model_params": {
 		"activation": "relu"
 	},
+	"channels": 2,
 	"train": {
 		"batch_size": 32,
 		"epochs": 10,
