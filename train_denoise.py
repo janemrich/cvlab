@@ -11,7 +11,7 @@ import model
 import progress
 from eval import plot_denoise
 
-def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, lr=0.001):
+def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, **kwargs):
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
@@ -22,12 +22,20 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 
 	train_dataset, val_dataset = torch.utils.data.random_split(test_dataset, [test_size, val_size], generator=torch.Generator().manual_seed(42))
 
-	masker = Masker(width = mask_grid_size, mode='interpolate')
-	optimizer = Adam(net.parameters(), lr=lr)
-
 	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+	masker = Masker(width = mask_grid_size, mode='interpolate')
+
+	optimizer_args_default = {'lr': 0.001}
+	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
+	
+	scheduler_args_default = {"patience":1, "cooldown":4}
+	scheduler_args = {k[len("scheduler_"):]: v for k, v in kwargs.items() if k.startswith("scheduler_")}
+	
+	optimizer = torch.optim.Adam(net.parameters(), **{**optimizer_args_default, **optimizer_args})
+	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, **{**scheduler_args_default, **scheduler_args})
 
 	net.to(device)
 	loss_function.to(device)
@@ -38,6 +46,8 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 	for e in range(epochs):
 		bar = progress.Bar("Epoch {}, train".format(e), finish=train_size)
 		net.train()
+		train_loss = 0.0
+		n_losses = 0
 		for i, batch in enumerate(dataloader):
 			noisy_images = batch.to(device)
 			noisy_images = noisy_images.float()
@@ -50,16 +60,21 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 			fade_factor = fade(noisy_images*mask)
 
 			loss = loss_function(net_output*mask, noisy_images*mask*fade_factor)
+			train_loss += loss.item()
+			n_losses += 1
 
 			optimizer.zero_grad()
 
 			loss.backward()
 
 			optimizer.step()
-			bar.inc_progress(batch_size)
+			bar.inc_progress(i*batch_size)
+		train_loss /= n_losses
+		del batch, noisy_images, net_input, net_output, loss 
 
 		net.eval()
 		val_loss = 0.0
+		n_losses = 0
 		for i, batch in enumerate(val_data_loader):
 			noisy = batch.to(device)
 			noisy = noisy.float()
@@ -69,10 +84,14 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 			net_output = net(net_input)
 
 			val_loss += loss_function(net_output*mask, noisy*mask).item()
+			n_losses += 1
 
-		print('\nLoss (', e, ' \t', round(loss.item(), 4), 'val-loss\t', round(val_loss, 4))
+		val_loss /= n_losses
+		scheduler.step(val_loss)
+		loss_display_factor = target_size[0] * target_size[1]
+		print('\nTrain Loss (', e, ' \t', round(train_loss, 4), 'val-loss\t', round(val_loss, 4))
 		with open('loss.txt', 'a') as f:
-			print(e, ';{:.10f}'.format(loss.item()), ';{:.10f}'.format(val_loss), file=f)
+			print(e, ';{:.10f}'.format(train_loss), ';{:.10f}'.format(val_loss), file=f)
 
 		plot_denoise(net, test_data_loader, device, e, channels)
 

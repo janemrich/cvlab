@@ -74,6 +74,7 @@ if __name__=="__main__":
 		loss,
 		dataset,
 		config['train']['epochs'],
+		config['dataset']['target_size'],
 		batch_size=config['train']['batch_size'],
 		device=args.device,
 		mask_grid_size=config['train']['mask_grid_size'],
