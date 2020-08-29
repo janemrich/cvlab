@@ -1,5 +1,5 @@
 {
-	"model": "n2s-babyu",
+	"model": "resnet",
 	"model_params": {
 		"activation": "relu"
 	},
@@ -7,12 +7,12 @@
 	"train": {
 		"batch_size": 32,
 		"epochs": 10,
-		"mask_grid_size": 4,
-		"fade_threshold": 1000
+		"mask_grid_size": 5,
+		"fade_threshold": 0
 	},
 	"dataset": {
-		"target_size": [128, 128],
-		"drop_background": "False",
+		"target_size": [64, 64],
+		"drop_background": "True",
 		"complete_background_noise": "True"
 	}
 }

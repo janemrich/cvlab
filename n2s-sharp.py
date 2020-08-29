@@ -163,7 +163,7 @@ if __name__=="__main__":
 	model_type = config['model']
 	if model_type == 'resnet':
 		from model import ResNet
-		net = ResNet(channels, channels, **config.get("model_params", {}))# in, out channels
+		net = ResNet(channels, channels, padding_mode='reflect', **config.get("model_params", {}))# in, out channels
 	if model_type == 'n2s-babyu':
 		from noise2self.models.babyunet import BabyUnet
 		net = BabyUnet(channels, channels)
