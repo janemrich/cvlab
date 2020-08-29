@@ -68,7 +68,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 			loss.backward()
 
 			optimizer.step()
-			bar.inc_progress(i*batch_size)
+			bar.inc_progress(batch_size)
 		train_loss /= n_losses
 		del batch, noisy_images, net_input, net_output, loss 
 
