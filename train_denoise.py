@@ -27,6 +27,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 	masker = Masker(width = mask_grid_size, mode='interpolate')
+	masker2 = Masker(width = mask_grid_size, mode='interpolate')
 
 	optimizer_args_default = {'lr': 0.001}
 	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
@@ -53,7 +54,16 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 			noisy_images = noisy_images.float()
 
 			noisy_images = noisy_images[:,:channels,::]
-			net_input, mask = masker.mask(noisy_images, i)
+			if channels == 1:
+				net_input, mask = masker.mask(noisy_images, i)
+			elif channels == 2:
+				net_input = torch.zeros_like(noisy_images)
+				net_input[:,:1,:,:], mask_high = masker.mask(noisy_images[:,:1,:,:], i)
+				net_input[:,1:,:,:], mask_low = masker.mask(noisy_images[:,1:,:,:], i+((mask_grid_size**2)//2))
+				mask = torch.stack([mask_high, mask_low], axis=-3)
+			else:
+				return NotImplementedError
+
 			net_output = net(net_input)
 
 			fade = transforms.Lambda(lambda x: fading_loss(x, threshold_from_end=fade_threshold))
@@ -90,7 +100,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		val_loss /= n_losses
 		scheduler.step(val_loss)
 		loss_display_factor = target_size[0] * target_size[1]
-		print('\nTrain Loss (', e, ' \t', round(train_loss, 4), 'val-loss\t', round(val_loss, 4))
+		print('\nTrain Loss (', e, ' \t', round(train_loss,6), 'val-loss\t', round(val_loss,6))
 		with open('loss.txt', 'a') as f:
 			print(e, ';{:.10f}'.format(train_loss), ';{:.10f}'.format(val_loss), file=f)
 
