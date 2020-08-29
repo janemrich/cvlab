@@ -20,7 +20,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 	test_size = int(0.5 * len(test_dataset))
 	val_size = len(test_dataset) - test_size
 
-	train_dataset, val_dataset = torch.utils.data.random_split(test_dataset, [test_size, val_size], generator=torch.Generator().manual_seed(42))
+	test_dataset, val_dataset = torch.utils.data.random_split(test_dataset, [test_size, val_size], generator=torch.Generator().manual_seed(42))
 
 	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
@@ -85,6 +85,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 			val_loss += loss_function(net_output*mask, noisy*mask).item()
 			n_losses += 1
+		del batch, noisy, net_input, net_output
 
 		val_loss /= n_losses
 		scheduler.step(val_loss)
