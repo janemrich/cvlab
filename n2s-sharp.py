@@ -85,9 +85,9 @@ def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_g
 			bar.inc_progress(batch_size)
 
 		
-		print('\nLoss (', i, ' \t', round(loss.item(), 6))
+		print('\nLoss (', i, ' \t', round(loss.item(), 2))
 		with open('loss.txt', 'a') as f:
-			print(e, '{:.10f}'.format(loss.item()), file=f)
+			print(e, ';{:.10f}'.format(loss.item()), file=f)
    
 
 		net.eval()
