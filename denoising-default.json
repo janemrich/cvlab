@@ -1,7 +1,8 @@
 {
-	"model": "resnet",
+	"model": "n2s-unet",
 	"model_params": {
-		"activation": "relu"
+		"activation": "relu",
+		"up": "bilinear"
 	},
 	"channels": 2,
 	"train": {

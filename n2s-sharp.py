@@ -1,22 +1,15 @@
 import sys
 sys.path.append('..')
-from data import N2SDataset
-import model
 
 import numpy as np
-import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 import json
-
 import torch
-from torchvision import transforms
 from torch.nn import MSELoss
-from torch.optim import Adam
-from torch.utils.data import DataLoader
 
-from noise2self.mask import Masker
+from data import N2SDataset
 import model
-import progress
+from train_denoise import fit
 
 """
 Config format:
@@ -30,7 +23,6 @@ Config format:
 }
 """
 
-
 def cli():
 	parser = ArgumentParser()
 	parser.add_argument("data", type=str, help="Root folder of the pro data")
@@ -39,108 +31,6 @@ def cli():
 	parser.add_argument("--name", type=str, nargs="?", default=None)
 	
 	return parser.parse_args()	
-
-
-def fit(net, loss_function, dataset, epochs, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2):
-
-	train_size = int(0.8 * len(dataset))
-	test_size = len(dataset) - train_size
-
-	train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
-
-	masker = Masker(width = mask_grid_size, mode='interpolate')
-	optimizer = Adam(net.parameters(), lr=0.001)
-
-	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-	test_data_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=3)
-
-	net.to(device)
-	loss_function.to(device)
-
-	plot_val(net, test_data_loader, device, 0, channels)
-
-	# training
-	for e in range(epochs):
-		bar = progress.Bar("Epoch {}, train".format(e), finish=train_size)
-		net.train()
-		for i, batch in enumerate(dataloader):
-			noisy_images = batch.to(device)
-			noisy_images = noisy_images.float()
-
-			# for now only low input
-			noisy_images = noisy_images[:,:channels,::]
-			net_input, mask = masker.mask(noisy_images, i)
-			net_output = net(net_input)
-
-			fade = transforms.Lambda(lambda x: fading_loss(x, threshold_from_end=fade_threshold))
-			fade_factor = fade(noisy_images*mask)
-
-			loss = loss_function(net_output*mask, noisy_images*mask*fade_factor)
-
-			optimizer.zero_grad()
-
-			loss.backward()
-
-			optimizer.step()
-			bar.inc_progress(batch_size)
-
-		
-		print('\nLoss (', i, ' \t', round(loss.item(), 2))
-		with open('loss.txt', 'a') as f:
-			print(e, ';{:.10f}'.format(loss.item()), file=f)
-   
-
-		net.eval()
-		plot_val(net, test_data_loader, device, e, channels)
-
-def plot_val(net, data_loader, device, e, channels):
-	i, test_batch = next(enumerate(data_loader))
-	noisy = test_batch.to(device)
-	noisy = noisy.float()
-	denoised = net(noisy[:,:channels,::]).detach()
-	noisy = noisy[:,:channels,::]
-	noisy, denoised = noisy.cpu(), denoised.cpu()
-	comp = np.concatenate([noisy, denoised], axis=-2)
-	if channels == 2:
-		comp = np.concatenate([comp[:,:1,:,:], comp[:,1:,:,:]], axis=-1)
-
-	n_pics = 3
-	fig = plt.figure(figsize=(6*n_pics, 7))
-	#fig.suptitle('channel low, noisy(top) vs denoised(bottom)', fontsize=30)
-	for j in range(n_pics):
-		# define images to show
-		if j == 0:
-			k = 3
-		if j == 2:
-			k = 4
-		else:
-			k = j
-		ax1 = fig.add_subplot(1,n_pics,j+1)
-		ax1.get_xaxis().set_visible(False)
-		ax1.get_yaxis().set_visible(False)
-		ax1.set_title("image {}".format(j))
-		ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-	plt.savefig('n2s_epoch' + str(e) + '.png', dpi=300)
-
-
-def fading_loss(x, threshold_from_end=1000, maxvalue=65535.0):
-	"""
-	creates fading factor that fades out linearly from 1 at threshold to 0 at maxvalue
-	"""
-	if threshold_from_end == 0:
-		return torch.full_like(x, 1.0)
-
-	mask = x < (maxvalue - threshold_from_end)
-	x =  1.0 - ((x - torch.full_like(x, maxvalue - threshold_from_end)) / threshold_from_end)
-	x[mask] = 1.0
-	return x
-	# simple python version
-	# if x > (maxvalue - start):
-	# if x < 0:	# if x 		# return (-(x - maxvalue)) / start
-	# else:
-		# return 1
-
 
 if __name__=="__main__":
 	args = cli()
@@ -169,7 +59,7 @@ if __name__=="__main__":
 		net = BabyUnet(channels, channels)
 	if model_type == 'n2s-unet':
 		from noise2self.models.unet import Unet
-		net = Unet(**config.get("model_params", {}))
+		net = Unet(n_channel_in=channels, n_channel_out=channels, **config.get("model_params", {}))
 	if model_type == 'n2s-dncnn':
 		from noise2self.models.dncnn import DnCNN
 		net = DnCNN(channels) # number of channels
