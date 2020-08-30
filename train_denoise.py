@@ -59,8 +59,8 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 			elif channels == 2:
 				net_input = torch.zeros_like(noisy_images)
 				net_input[:,:1,:,:], mask_high = masker.mask(noisy_images[:,:1,:,:], i)
-				net_input[:,1:,:,:], mask_low = masker.mask(noisy_images[:,1:,:,:], i+((mask_grid_size**2)//2))
-				mask = torch.stack([mask_high, mask_low], axis=-3)
+				net_input[:,1:,:,:], mask_low = masker.mask(noisy_images[:,1:,:,:], i)
+				mask = torch.stack([mask_high, mask_low], axis=-3) #TODO check wether this is the correct order, maybe different masks work
 			else:
 				return NotImplementedError
 
