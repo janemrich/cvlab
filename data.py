@@ -230,12 +230,13 @@ class ProDemosaicDataset(SmithData):
 				shift_row = random.randrange(diff_row)
 			if diff_col > 0:
 				shift_col = random.randrange(diff_col)
-			if np.mean(pro[0, shift_row:shift_row+patch_shape[0], shift_col:shift_col+patch_shape[1]]) < 0.1 and fail_count < max_fails:
+			if np.mean(pro[0, shift_row:shift_row+patch_shape[1], shift_col:shift_col+patch_shape[2]]) < 0.05 and fail_count < max_fails:
 				fail_count += 1
 				continue
 			positions.append((shift_row, shift_col))
 		
 		self.patches_positions[idx]= positions
+		# self.patches_positions = [[(400, 200)*self.patches_per_image], [(400, 200)*self.patches_per_image]]
 
 	def reset(self):
 		self.patches_positions = [[]] * super(ProDemosaicDataset, self).__len__()

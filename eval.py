@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 import os
 
-def evaluate_smithdata(dataset, model, resdir, device, step, n_images=4):
+def evaluate_smithdata(dataset, model, resdir, device, step, n_images=1):
 	# cast to ProDemosaicDataset
 	while not isinstance(dataset, ProDemosaicDataset):
 		dataset = dataset.dataset
