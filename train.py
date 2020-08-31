@@ -9,17 +9,18 @@ import os
 from datetime import datetime
 
 def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None, pretrain=False, val_frac=0.1, **kwargs):
+	if "cuda" in device:
+		torch.backends.cudnn.benchmark = True
 	if pretrain:
 		name = name + "-pre"
 	logdir = os.path.join('runs', name + datetime.now().strftime("_%d%b-%H%M%S")) if name is not None else None
 	writer = SummaryWriter(log_dir=logdir)
 
 	ds_train, ds_val = utils.torch_random_split_frac(dataset, [1.0-val_frac, val_frac])
-	ds_val = ds_train
 
-	loader_train = torch.utils.data.DataLoader(ds_train, batch_size=batch_size, shuffle=False)
-	loader_test = torch.utils.data.DataLoader(ds_val, batch_size=batch_size, shuffle=False)
-	loader_test = loader_train
+	loader_train = torch.utils.data.DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+	loader_test = torch.utils.data.DataLoader(ds_val, batch_size=batch_size, shuffle=False, num_workers=4)
+	
 	net.to(device)
 	criterion.to(device)
 
@@ -35,8 +36,9 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	valdir = os.path.join(writer.log_dir, "val")
 	os.mkdir(valdir)
 	
-	n = 1
+	n = 4
 
+	global_step = 0
 	for e in range(epochs):
 		bar = progress.Bar("Epoch {}, train".format(e), finish=len(ds_train))
 		net.train()
@@ -48,8 +50,9 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			loss = criterion(Y, Y_)
 			loss.backward()
 			optimizer.step()
-			writer.add_scalar('Loss/train', loss.item())
+			writer.add_scalar('Loss/train', loss.item(), global_step=global_step)
 			bar.inc_progress(len(X))
+			global_step += 1
 		del X, Y, Y_, loss
 
 		bar = progress.Bar("Epoch {}, test".format(e), finish=len(ds_val))
@@ -70,7 +73,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 				n_losses += 1
 				bar.inc_progress(len(X))
 			loss = losses / n_losses
-			writer.add_scalar('Loss/val', losses / n_losses)
+			writer.add_scalar('Loss/val', losses / n_losses, global_step=e)
 			# scheduler.step(loss)
 			
 			evaluate_smithdata(dataset, net, valdir, device, e)
