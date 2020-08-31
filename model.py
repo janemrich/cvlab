@@ -168,11 +168,11 @@ class ResBlock(nn.Module):
 
 class ResNet(nn.Module):
 	"""Stack multiple resblocks and an in and out convolutiono"""
-	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu', full_res=False, last_layer_activation='none', padding_mode='zeros'):
+	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu', full_res=False, last_layer_activation='none', padding_mode='zeros', in_conv_kernel=3, block_last_layer_activation=True):
 		super(ResNet, self).__init__()
 		self.net = torch.nn.Sequential(
-			*[ConvBlock(i, o, 3, activation=activation, padding_mode=padding_mode) for i, o in zip([in_channels]+in_conv[:-1], in_conv)],
-			*[ResBlock(in_conv[-1], 3, hidden_channels=block, activation=activation, padding_mode=padding_mode) for block in res_blocks],
+			*[ConvBlock(i, o, in_conv_kernel, activation=activation, padding_mode=padding_mode) for i, o in zip([in_channels]+in_conv[:-1], in_conv)],
+			*[ResBlock(in_conv[-1], 3, hidden_channels=block, activation=activation, padding_mode=padding_mode, last_layer_activation=block_last_layer_activation) for block in res_blocks],
 			nn.Conv2d(in_conv[-1], in_channels, kernel_size=1)
 		)
 		self.full_res = full_res
