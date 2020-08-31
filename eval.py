@@ -4,12 +4,12 @@ from torch.utils.data import DataLoader
 import numpy as np
 import os
 
-def evaluate_smithdata(dataset, model, resdir, device, step, n_images=1):
+def evaluate_smithdata(dataset, model, resdir, device, step, n_images=4):
 	# cast to ProDemosaicDataset
 	while not isinstance(dataset, ProDemosaicDataset):
 		dataset = dataset.dataset
 	# create DataLoader
-	loader = DataLoader(dataset, batch_size=n_images, shuffle=False, num_workers=3)
+	loader = DataLoader(dataset, batch_size=n_images, shuffle=False, num_workers=4)
 
 	X, Y = next(iter(loader))
 	X, Y = X.to(device), Y.cpu().detach().numpy()
@@ -30,7 +30,7 @@ def evaluate_smithdata(dataset, model, resdir, device, step, n_images=1):
 		ax1.set_title("image {}".format(j))
 		ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
 		
-	plt.savefig(os.path.join(resdir, "eval{}.png".format(step)), dpi=500)
+	plt.savefig(os.path.join(resdir, "eval{}.png".format(step)), dpi=400)
 
 def plot_denoise(net, data_loader, device, e, channels):
 	i, test_batch = next(enumerate(data_loader))
