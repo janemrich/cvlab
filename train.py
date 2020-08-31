@@ -27,7 +27,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	optimizer_args_default = {'lr': 0.001}
 	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
 	
-	scheduler_args_default = {"patience":1, "cooldown":4}
+	scheduler_args_default = {"patience":1, "cooldown":4, "factor": 0.5}
 	scheduler_args = {k[len("scheduler_"):]: v for k, v in kwargs.items() if k.startswith("scheduler_")}
 	
 	optimizer = torch.optim.Adam(net.parameters(), **{**optimizer_args_default, **optimizer_args})
