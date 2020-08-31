@@ -74,7 +74,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 				bar.inc_progress(len(X))
 			loss = losses / n_losses
 			writer.add_scalar('Loss/val', losses / n_losses, global_step=e)
-			# scheduler.step(loss)
+			scheduler.step(loss)
 			
 			evaluate_smithdata(dataset, net, valdir, device, e)
 
