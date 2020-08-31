@@ -113,15 +113,15 @@ class OutConv(nn.Module):
 
 
 class UNet(nn.Module):
-	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], residual=False):
+	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False):
 		super(UNet, self).__init__()
 		self.n_channels = n_channels
 		self.bilinear = bilinear
 		self.residual = residual
 
 		self.inconv = nn.Sequential(
-			ConvBlock(n_channels, hidden[0], 3, activation=activation),
-			ConvBlock(hidden[0], hidden[0], 3, activation=activation)
+			ConvBlock(n_channels, hidden[0], 3, activation=activation, padding_mode=padding_mode),
+			ConvBlock(hidden[0], hidden[0], 3, activation=activation, padding_mode=padding_mode)
 		)
 		self.down_convs = nn.ModuleList([Down(i, o) for i, o in zip(hidden[:-1], hidden[1:])])
 		self.up_convs = nn.ModuleList([UpSkip(i, o, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))])
@@ -168,11 +168,11 @@ class ResBlock(nn.Module):
 
 class ResNet(nn.Module):
 	"""Stack multiple resblocks and an in and out convolutiono"""
-	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu', full_res=False, last_layer_activation='none'):
+	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu', full_res=False, last_layer_activation='none', padding_mode='zeros'):
 		super(ResNet, self).__init__()
 		self.net = torch.nn.Sequential(
-			*[ConvBlock(i, o, 3, activation=activation) for i, o in zip([in_channels]+in_conv[:-1], in_conv)],
-			*[ResBlock(in_conv[-1], 3, hidden_channels=block, activation=activation) for block in res_blocks],
+			*[ConvBlock(i, o, 3, activation=activation, padding_mode=padding_mode) for i, o in zip([in_channels]+in_conv[:-1], in_conv)],
+			*[ResBlock(in_conv[-1], 3, hidden_channels=block, activation=activation, padding_mode=padding_mode) for block in res_blocks],
 			nn.Conv2d(in_conv[-1], in_channels, kernel_size=1)
 		)
 		self.full_res = full_res

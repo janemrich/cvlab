@@ -77,8 +77,17 @@ def interpolate_mask(tensor, mask, mask_inv):
 
     mask = mask.to(device)
 
-    kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
-    kernel = kernel[np.newaxis, np.newaxis, :, :]
+    # adapt to one or two channels
+    if tensor.shape[1] == 1:
+        kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
+        kernel = kernel[np.newaxis, np.newaxis, :, :]
+    elif tensor.shape[1] == 2:
+        kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
+        stack = np.stack([kernel, kernel], axis=0)
+        kernel = stack[np.newaxis, :, :, :]
+    else:
+        return NotImplementedError
+
     kernel = torch.Tensor(kernel).to(device)
     kernel = kernel / kernel.sum()
 
