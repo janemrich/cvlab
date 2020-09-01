@@ -34,7 +34,10 @@ def cli():
 
 if __name__=="__main__":
 	args = cli()
-	
+
+	if args.name is None:
+		args.name = config.get("name", None)
+
 	with open(args.config, 'r') as f:
 		config = json.load(f)
 
@@ -53,7 +56,7 @@ if __name__=="__main__":
 	if loss_fun == 'mse':
 		loss = torch.nn.MSELoss()
 	elif loss_fun == 'smoothmse':	
-		loss = model.SmoothMSELoss(2, 1.0)
+		loss = model.SmoothMSELoss(2, 0.1)
 	
 	dataset = ProDemosaicDataset(args.data, **config.get("dataset", {}))
 
