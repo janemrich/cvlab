@@ -108,6 +108,7 @@ class SmithData():
 	def load_grouped_filenames(self):
 		files = sorted(os.listdir(self.root))
 		if self.sharp:
+			# 0=high, 1=low
 			return list(zip(files[0::5], files[1::5], files[4::5]))
 		elif self.has_rgb:
 			return list(zip(files[0::3], files[1::3], files[2::3]))
@@ -180,6 +181,7 @@ class N2SDataset(SmithData):
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 		self.drop_background = drop_background
 
+	# make it deterministic #TODO better name
 	def test():
 		self.test = True
 
