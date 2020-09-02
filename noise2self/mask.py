@@ -13,14 +13,17 @@ class Masker():
         self.infer_single_pass = infer_single_pass
         self.include_mask_as_input = include_mask_as_input
 
-    def mask(self, X, i, pair=False):
+    def mask(self, X, i, pair=False, pair_direction='right'):
 
         phasex = i % self.grid_size
         phasey = (i // self.grid_size) % self.grid_size
         mask = pixel_grid_mask(X[0, 0].shape, self.grid_size, phasex, phasey)
-        if pair:
+        if pair and pair_direction is 'right':
             # mask the pixel on the right as well
             mask[:,1:] += mask.clone()[:,:-1]
+        elif pair and pair_direction is 'left':
+            mask[:,:-1] += mask.clone()[:,1:]
+
         mask = mask.to(X.device)
 
         mask_inv = torch.ones(mask.shape).to(X.device) - mask
