@@ -50,9 +50,9 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		n_losses = 0
 		rng = np.random.default_rng()
 
-		# allocate memory
+		# allocate memor
 		normal_batch = next(iter(dataloader))[:,:channels,::].float()
-		zero_mask = torch.zeros(normal_batch.shape[-2:])
+		zero_mask = torch.zeros(normal_batch.shape[-2:]).to(device)
 		mask_low = torch.empty(normal_batch.shape[-2:])
 		mask_high = torch.empty(normal_batch.shape[-2:])
 		if channels == 1:

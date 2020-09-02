@@ -2,14 +2,15 @@
 	"model": "n2s-unet",
 	"model_params": {
 		"activation": "relu",
-		"up": "bilinear"
+		"up": "bilinear",
+		"residual": true
 	},
 	"channels": 2,
 	"train": {
 		"batch_size": 32,
-		"epochs": 10,
+		"epochs": 200,
 		"mask_grid_size": 5,
-		"fade_threshold": 0
+		"fade_threshold": 1600
 	},
 	"dataset": {
 		"target_size": [64, 64],
