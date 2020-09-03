@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 openimages/
-runs/
+runs*
 plots/
 .vscode/
 data/

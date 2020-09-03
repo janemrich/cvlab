@@ -52,6 +52,7 @@ class RawDataset():
 
 	def get_rgb(self, idx):
 		arr = np.array(Image.open(os.path.join(self.root, self.paths_grouped[idx][2])))
+		arr /= 255.0
 		return arr
 
 	def __len__(self):
@@ -160,12 +161,17 @@ class SmithData():
 			return arr
 
 	def get_rgb(self, idx):
-		arr = np.array(Image.open(os.path.join(self.root, self.paths_grouped[idx][2])))
+		arr = np.array(Image.open(os.path.join(self.root, self.paths_grouped[idx][2]))).astype('float')
+		arr /= 255.0
 		bbox = self.masks[idx]
 		
 		if self.crop:
-			arr = arr[bbox[0]:bbox[1], bbox[2]:bbox[3]]	
+			arr = arr[bbox[0]:bbox[1], bbox[2]:bbox[3], :]	
 		
+		from matplotlib.colors import rgb_to_hsv
+		arr = rgb_to_hsv(arr)
+		
+		arr = np.transpose(arr, (2, 0, 1))
 		return arr
 
 	def __len__(self):
@@ -422,7 +428,8 @@ class ProColoringDataset(SmithData):
 		pro = super(ProColoringDataset, self).__getitem__(idx_img)
 		rgb = super(ProColoringDataset, self).get_rgb(idx_img)
 		patch = np.zeros((2, self.patch_rows, self.patch_cols))
-		
+		assert pro.shape[1] == rgb.shape[1] and pro.shape[2] == rgb.shape[2], (pro.shape, rgb.shape)	
+
 		if len(self.patches_positions[idx_img]) <= idx_patch:
 			# we did not generate the random patch positions for this image yet
 			self.create_patches(idx_img, pro, patch.shape) 
@@ -452,7 +459,7 @@ class ProColoringDataset(SmithData):
 		return sharp, pro, super(ProColoringDataset, self).get_rgb(idx)
 
 	def __len__(self):
-		return super(ProDemosaicRGBDataset, self).__len__() * self.patches_per_image
+		return super(ProColoringDataset, self).__len__() * self.patches_per_image
 
 
 class ProDemosaicRGBDataset(SmithData):
