@@ -58,16 +58,23 @@ class ConvBlock(nn.Module):
 class Down(nn.Module):
 	"""Downscaling with maxpool then double conv"""
 
-	def __init__(self, in_channels, out_channels, activation='relu'):
+	def __init__(self, in_channels, out_channels, activation='relu', downsampling='conv'):
 		super().__init__()
-		self.maxpool_conv = nn.Sequential(
-			nn.MaxPool2d(2),
+		if downsampling == 'conv':
+			self.downsampling = nn.Conv2D(in_channels, in_channels, kernel_size=2, stride=2, groups=32)
+		elif downsampling == 'avg':
+			self.downsampling = nn.AvgPool2d(kernel_size=2)
+		else:
+			self.downsampling = nn.MaxPool2d(kernel_size=2)
+		
+		self.down = nn.Sequential(
+			self.downsampling,
 			ConvBlock(in_channels, out_channels, 3, activation=activation),
 			ConvBlock(out_channels, out_channels, 3, activation=activation)
 		)
 
 	def forward(self, x):
-		return self.maxpool_conv(x)
+		return self.down(x)
 
 
 class UpSkip(nn.Module):
@@ -115,7 +122,7 @@ class OutConv(nn.Module):
 
 
 class UNet(nn.Module):
-	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False, dilation=False):
+	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False, dilation=False, downsampling='maxpool'):
 		super(UNet, self).__init__()
 		self.n_channels = n_channels
 		self.bilinear = bilinear
@@ -125,7 +132,7 @@ class UNet(nn.Module):
 			ConvBlock(n_channels, hidden[0], 3, activation=activation, padding_mode=padding_mode, dilation=dilation),
 			ConvBlock(hidden[0], hidden[0], 3, activation=activation, padding_mode=padding_mode)
 		)
-		self.down_convs = nn.ModuleList([Down(i, o) for i, o in zip(hidden[:-1], hidden[1:])])
+		self.down_convs = nn.ModuleList([Down(i, o, downsampling=downsampling) for i, o in zip(hidden[:-1], hidden[1:])])
 		self.up_convs = nn.ModuleList([UpSkip(i, o, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))])
 		self.outconv = nn.Conv2d(hidden[0], n_channels, kernel_size=1)
 
