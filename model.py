@@ -86,17 +86,15 @@ class UpSkip(nn.Module):
 		# if bilinear, use the normal convolutions to reduce the number of channels
 		if bilinear:
 			self.up = nn.Sequential(
-				nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-				nn.Conv2d(in_channels, in_channels//2, kernel_size=3, stride=1)
+				nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
 			)
 		else:
 			self.up = nn.Sequential(
-				nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2),
-				nn.Conv2d(in_channels, in_channels//2, kernel_size=3, stride=1)
+				nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2)
 			)
 		
 		self.conv = nn.Sequential(
-			ConvBlock(in_channels, out_channels, 3, activation=activation),
+			ConvBlock(in_channels*2, out_channels, 3, activation=activation),
 			ConvBlock(out_channels, out_channels, 3, activation=activation)
 		)
 
