@@ -9,6 +9,8 @@ import glob
 import random
 import utils
 
+from noise2self.mask import Masker
+
 class RawDataset():
 	"""
 	unaltered access to Smith images dataset format 
@@ -173,13 +175,17 @@ class SmithData():
 
 class N2SDataset(SmithData):
 
-	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8, complete_background_noise=False):
+	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
+				complete_background_noise=False, masking=False, channels=2, mask_grid_size=4):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
 		self.patches_per_image = patches_per_image
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 		self.drop_background = drop_background
+		self.masking = masking
+		self.channels = channels
+		self.mask_grid_size = mask_grid_size
 
 	# make it deterministic #TODO better name
 	def test():
@@ -234,7 +240,33 @@ class N2SDataset(SmithData):
 			shift_row:shift_row+patch.shape[1]-min(images.shape[1] - patch.shape[1], 0),
 			shift_col:shift_col+patch.shape[2]-min(images.shape[2] - patch.shape[2], 0)]
 
+		# images = patch[:, :, :-1]
 		images = torch.tensor(patch[:, :, :-1], dtype=torch.float)
+
+		if self.masking:
+			rng = np.random.default_rng()
+			loss_channel = rng.integers(2)
+			masked_pixel = rng.integers(self.mask_grid_size**2)
+			images = images[:self.channels,::].unsqueeze(0)
+			masker = Masker(width = self.mask_grid_size, mode='interpolate')
+			if self.channels == 1:
+				net_input, mask = masker.mask(images, masked_pixel)
+			elif self.channels == 2:
+				net_input = torch.empty_like(images)
+				zero_mask = torch.zeros(images.shape[-2:])
+				if loss_channel == 1:
+					net_input[:,:1,:,:], mask_high = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction='right')
+					net_input[:,1:,:,:], mask_low = masker.mask(images[:,1:,:,:], masked_pixel)
+					# only take loss of masking where only one pixel is masked
+					mask = torch.stack([zero_mask, mask_low], axis=-3)
+				else:
+					net_input[:,:1,:,:], mask_high = masker.mask(images[:,:1,:,:], masked_pixel) # because high channel is shifted to the left
+					net_input[:,1:,:,:], mask_low = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction='left')
+					mask = torch.stack([mask_high, zero_mask], axis=-3)
+			else:
+				return NotImplementedError
+			
+			return images.squeeze(0), net_input.squeeze(0), mask
 
 		return images
 

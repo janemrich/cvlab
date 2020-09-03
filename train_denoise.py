@@ -22,11 +22,11 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 	test_dataset, val_dataset = torch.utils.data.random_split(test_dataset, [test_size, val_size], generator=torch.Generator().manual_seed(42))
 
-	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
-	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
+	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
+	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
-	masker = Masker(width = mask_grid_size, mode='interpolate')
+	#masker = Masker(width = mask_grid_size, mode='interpolate')
 
 	optimizer_args_default = {'lr': 0.001}
 	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
@@ -48,47 +48,40 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		net.train()
 		train_loss = 0.0
 		n_losses = 0
-		rng = np.random.default_rng()
 
-		# allocate memor
-		normal_batch = next(iter(dataloader))[:,:channels,::].float()
-		zero_mask = torch.zeros(normal_batch.shape[-2:]).to(device)
-		mask_low = torch.empty(normal_batch.shape[-2:])
-		mask_high = torch.empty(normal_batch.shape[-2:])
-		if channels == 1:
-			mask = torch.empty(normal_batch.shape[-3:])
-		else:
-			mask = torch.empty(normal_batch.shape[-2:])
+		for noisy, net_input, mask in dataloader:
+			noisy.to(device)
+			net_input.to(device)
+			mask.to(device)
 
-		for batch in dataloader:
-			i = rng.integers(mask_grid_size**2)
-			loss_channel = rng.integers(2)
-			noisy_images = batch.to(device)
-			noisy_images = noisy_images.float()
+			def plot_input():
+				plt.figure(1)
+				plt.subplot(231)
+				plt.imshow(noisy[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
 
-			noisy_images = noisy_images[:,:channels,::]
-			if channels == 1:
-				net_input, mask = masker.mask(noisy_images, i)
-			elif channels == 2:
-				net_input = torch.empty_like(noisy_images)
-				if loss_channel == 1:
-					net_input[:,:1,:,:], mask_high = masker.mask(noisy_images[:,:1,:,:], i, pair=True, pair_direction='right')
-					net_input[:,1:,:,:], mask_low = masker.mask(noisy_images[:,1:,:,:], i)
-					# only take loss of masking where only one pixel is masked
-					mask = torch.stack([zero_mask, mask_low], axis=-3)
-				else:
-					net_input[:,:1,:,:], mask_high = masker.mask(noisy_images[:,:1,:,:], i) # because high channel is shifted to the left
-					net_input[:,1:,:,:], mask_low = masker.mask(noisy_images[:,1:,:,:], i, pair=True, pair_direction='left')
-					mask = torch.stack([mask_high, zero_mask], axis=-3)
-			else:
-				return NotImplementedError
+				plt.subplot(234)
+				plt.imshow(noisy[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+	
+				plt.subplot(232)
+				plt.imshow(net_input[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+				plt.subplot(235)
+				plt.imshow(net_input[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+				plt.subplot(233)
+				plt.imshow(mask[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+				plt.subplot(236)
+				plt.imshow(mask[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+				plt.show()
+			#plot_input()
 
 			net_output = net(net_input)
 
 			fade = transforms.Lambda(lambda x: fading_loss(x, threshold_from_end=fade_threshold))
-			fade_factor = fade(noisy_images*mask)
+			fade_factor = fade(noisy*mask)
 
-			loss = loss_function(net_output*mask, noisy_images*mask*fade_factor)
+			loss = loss_function(net_output*mask, noisy*mask*fade_factor)
 			train_loss += loss.item()
 			n_losses += 1
 
@@ -99,31 +92,29 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 			optimizer.step()
 			bar.inc_progress(batch_size)
 		train_loss /= n_losses
-		del batch, noisy_images, net_input, net_output, loss 
+		del noisy, net_input, mask, net_output, fade_factor, loss 
 
 		net.eval()
 		val_loss = 0.0
 		n_losses = 0
-		for i, batch in enumerate(val_data_loader):
-			noisy = batch.to(device)
+		for noisy, net_input, mask in val_data_loader:
+			noisy = noisy.to(device)
 			noisy = noisy.float()
 
-			noisy = noisy[:,:channels,::]
-			net_input, mask = masker.mask(noisy, i)
 			net_output = net(net_input)
 
 			val_loss += loss_function(net_output*mask, noisy*mask).item()
 			n_losses += 1
-		del batch, noisy, net_input, net_output
+		del noisy, net_input, mask, net_output
 
 		val_loss /= n_losses
 		scheduler.step(val_loss)
-		loss_display_factor = target_size[0] * target_size[1]
 		print('\nTrain Loss (', e, ' \t', round(train_loss,6), 'val-loss\t', round(val_loss,6))
 		with open('loss.txt', 'a') as f:
 			print(e, ';{:.10f}'.format(train_loss), ';{:.10f}'.format(val_loss), file=f)
 
 		plot_denoise(net, test_data_loader, device, e, channels)
+
 
 def fading_loss(x, threshold_from_end=1000, maxvalue=65535.0):
 	"""

@@ -17,11 +17,14 @@ class Masker():
 
         phasex = i % self.grid_size
         phasey = (i // self.grid_size) % self.grid_size
+
         mask = pixel_grid_mask(X[0, 0].shape, self.grid_size, phasex, phasey)
-        if pair and pair_direction is 'right':
+
+        ### makes mask with two pixels next to each other
+        if pair and pair_direction == 'right':
             # mask the pixel on the right as well
             mask[:,1:] += mask.clone()[:,:-1]
-        elif pair and pair_direction is 'left':
+        elif pair and pair_direction == 'left':
             mask[:,:-1] += mask.clone()[:,1:]
 
         mask = mask.to(X.device)
@@ -84,10 +87,10 @@ def interpolate_mask(tensor, mask, mask_inv):
     mask = mask.to(device)
 
     # adapt to one or two channels
-    if tensor.shape[1] == 1:
+    if tensor.shape[-3] == 1:
         kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
         kernel = kernel[np.newaxis, np.newaxis, :, :]
-    elif tensor.shape[1] == 2:
+    elif tensor.shape[-3] == 2:
         kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
         stack = np.stack([kernel, kernel], axis=0)
         kernel = stack[np.newaxis, :, :, :]
@@ -98,6 +101,6 @@ def interpolate_mask(tensor, mask, mask_inv):
     kernel = kernel / kernel.sum()
 
     #filtered_tensor = torch.nn.functional.conv2d(tensor, kernel.double(), stride=1, padding=1)
-    filtered_tensor = torch.nn.functional.conv2d(tensor, kernel, stride=1, padding=1)
+    filtered_tensor = torch.nn.functional.conv2d(torch.nn.ReplicationPad2d(1)(tensor*mask_inv), kernel, stride=1)
 
     return filtered_tensor * mask + tensor * mask_inv
