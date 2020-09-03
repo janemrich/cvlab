@@ -67,8 +67,8 @@ def evaluate_smithdata(dataset, model, resdir, device, step, n_images=4):
 	plt.savefig(os.path.join(resdir, "eval{}.png".format(step)), dpi=400)
 
 def plot_denoise(net, data_loader, device, e, channels):
-	i, test_batch = next(enumerate(data_loader))
-	noisy = test_batch.to(device)
+	noisy, net_input, mask = next(iter(data_loader))
+	noisy = noisy.to(device)
 	noisy = noisy.float()
 	denoised = net(noisy[:,:channels,::]).detach()
 	noisy = noisy[:,:channels,::]
