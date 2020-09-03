@@ -47,17 +47,17 @@ if __name__=="__main__":
 			return self.mse(y[:, 0, :, :], _y[:, 0, :, :])
 
 	net = torch.nn.Sequential(
-		torch.nn.Conv2d(2, 20, kernel_size=1),
+		torch.nn.Conv2d(2, 100, kernel_size=1),
 		torch.nn.ReLU(),
-		torch.nn.Conv2d(20, 30, kernel_size=1),
+		torch.nn.Conv2d(100, 100, kernel_size=1),
 		torch.nn.ReLU(),
-		torch.nn.Conv2d(30, 40, kernel_size=1),
+		torch.nn.Conv2d(100, 100, kernel_size=1),
 		torch.nn.ReLU(),
-		torch.nn.Conv2d(40, 50, kernel_size=1),
+		torch.nn.Conv2d(100, 100, kernel_size=1),
 		torch.nn.ReLU(),
-		torch.nn.Conv2d(50, 20, kernel_size=1),
+		torch.nn.Conv2d(100, 100, kernel_size=1),
 		torch.nn.ReLU(),
-		torch.nn.Conv2d(20, 3, kernel_size=1)
+		torch.nn.Conv2d(100, 3, kernel_size=1)
 	)
 
 	loss = torch.nn.MSELoss()
