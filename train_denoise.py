@@ -50,9 +50,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		n_losses = 0
 
 		for noisy, net_input, mask in dataloader:
-			noisy.to(device)
-			net_input.to(device)
-			mask.to(device)
+			noisy, net_input, mask = noisy.to(device), net_input.to(device), mask.to(device)
 
 			def plot_input():
 				plt.figure(1)
@@ -98,8 +96,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		val_loss = 0.0
 		n_losses = 0
 		for noisy, net_input, mask in val_data_loader:
-			noisy = noisy.to(device)
-			noisy = noisy.float()
+			noisy, net_input, mask = noisy.to(device), net_input.to(device), mask.to(device)
 
 			net_output = net(net_input)
 
