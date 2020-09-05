@@ -4,11 +4,11 @@ from PIL import Image, ImageOps
 from torch.utils.tensorboard import SummaryWriter
 import progress
 import utils
-from eval import evaluate_smithdata
+from eval import evaluate_smithdata, evaluate_color
 import os
 from datetime import datetime
 
-def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None, pretrain=False, val_frac=0.1, **kwargs):
+def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None, pretrain=False, val_frac=0.1, eval_fn=evaluate_smithdata, **kwargs):
 	if "cuda" in device:
 		torch.backends.cudnn.benchmark = True
 	if pretrain:
@@ -76,7 +76,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			writer.add_scalar('Loss/val', losses / n_losses, global_step=e)
 			scheduler.step(loss)
 			
-			evaluate_smithdata(dataset, net, valdir, device, e)
+			eval_fn(dataset, net, valdir, device, e)
 
 			del X, Y, Y_, loss, losses
 

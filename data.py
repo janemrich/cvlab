@@ -129,7 +129,7 @@ class SmithData():
 			high = np.array(Image.open(high_path)) # use high image to calculate masking box
 			low = np.array(Image.open(low_path)) # use high image to calculate masking box
 		
-		bbox = self.masks[idx]
+		bbox = self.masks[idx] if self.crop else [0, min(low.shape[0], high.shape[0]), 0, min(low.shape[1], high.shape[1])]
 
 		arr = np.stack((high, low), axis=0)
 
