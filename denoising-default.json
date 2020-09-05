@@ -6,6 +6,7 @@
 	},
 	"channels": 2,
 	"train": {
+		"learn_rate": 0.001,
 		"batch_size": 8,
 		"epochs": 200,
 		"mask_grid_size": 4,

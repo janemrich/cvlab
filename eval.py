@@ -95,4 +95,37 @@ def plot_denoise(net, data_loader, device, e, channels):
 		ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
 
 	plt.savefig('n2s_epoch' + str(e) + '.png', dpi=300)
+	del noisy, denoised, comp
 
+def plot_denoising_masking(noisy, net_input, mask, net_output):
+	plt.figure(1)
+	plt.subplot(251)
+	plt.imshow(noisy[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+	plt.subplot(256)
+	plt.imshow(noisy[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+	plt.subplot(252)
+	plt.imshow(net_input[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+	plt.subplot(257)
+	plt.imshow(net_input[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+	plt.subplot(253)
+	plt.imshow(mask[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+	plt.subplot(258)
+	plt.imshow(mask[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+	plt.subplot(254)
+	plt.imshow(net_input[0,0] - noisy[0,0], interpolation=None, cmap='gray')
+
+	plt.subplot(259)
+	plt.imshow(net_input[0,1] - noisy[0,1], interpolation=None, cmap='gray')
+
+	plt.subplot(255)
+	plt.imshow(net_output[0,0].detach(), interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+
+	plt.subplot(2,5,10)
+	plt.imshow(net_output[0,1].detach(), interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+	plt.show()

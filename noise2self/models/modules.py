@@ -2,7 +2,7 @@ import torch.nn as nn
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, dropout=False, norm='batch', residual=True, activation='leakyrelu', transpose=False, padding_mode='reflect'):
+    def __init__(self, in_channels, out_channels, dropout=False, norm='batch', residual=True, activation='leakyrelu', transpose=False, padding_mode='replicate'):
         super(ConvBlock, self).__init__()
         self.dropout = dropout
         self.residual = residual

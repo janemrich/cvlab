@@ -79,5 +79,6 @@ if __name__=="__main__":
 		device=args.device,
 		mask_grid_size=config['train']['mask_grid_size'],
 		fade_threshold=config['train']['fade_threshold'],
-		channels=channels
+		channels=channels,
+		learn_rate=config['train']['learn_rate']
 		)

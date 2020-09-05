@@ -10,8 +10,9 @@ from noise2self.mask import Masker
 import model
 import progress
 from eval import plot_denoise
+from eval import plot_denoising_masking
 
-def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, **kwargs):
+def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.001, **kwargs):
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
@@ -22,13 +23,11 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 	test_dataset, val_dataset = torch.utils.data.random_split(test_dataset, [test_size, val_size], generator=torch.Generator().manual_seed(42))
 
-	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
-	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
-	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
+	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
 
-	#masker = Masker(width = mask_grid_size, mode='interpolate')
-
-	optimizer_args_default = {'lr': 0.001}
+	optimizer_args_default = {'lr': learn_rate * (batch_size/32) * (mask_grid_size**2 / 4**2)}
 	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
 	
 	scheduler_args_default = {"patience":1, "cooldown":4}
@@ -46,51 +45,29 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 	for e in range(epochs):
 		bar = progress.Bar("Epoch {}, train".format(e), finish=train_size)
 		net.train()
+
 		train_loss = 0.0
 		n_losses = 0
-
 		for noisy, net_input, mask in dataloader:
-			noisy.to(device)
-			net_input.to(device)
-			mask.to(device)
-
-			def plot_input():
-				plt.figure(1)
-				plt.subplot(231)
-				plt.imshow(noisy[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-				plt.subplot(234)
-				plt.imshow(noisy[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-	
-				plt.subplot(232)
-				plt.imshow(net_input[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-				plt.subplot(235)
-				plt.imshow(net_input[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-				plt.subplot(233)
-				plt.imshow(mask[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-				plt.subplot(236)
-				plt.imshow(mask[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-				plt.show()
-			#plot_input()
+			noisy, net_input, mask = noisy.to(device), net_input.to(device), mask.to(device)
 
 			net_output = net(net_input)
+
+			#plot_denoising_masking(noisy, net_input, mask, net_output)
 
 			fade = transforms.Lambda(lambda x: fading_loss(x, threshold_from_end=fade_threshold))
 			fade_factor = fade(noisy*mask)
 
-			loss = loss_function(net_output*mask, noisy*mask*fade_factor)
+			loss = loss_function(net_output*mask*fade_factor, noisy*mask*fade_factor)
 			train_loss += loss.item()
 			n_losses += 1
 
 			optimizer.zero_grad()
-
 			loss.backward()
-
 			optimizer.step()
+
 			bar.inc_progress(batch_size)
+
 		train_loss /= n_losses
 		del noisy, net_input, mask, net_output, fade_factor, loss 
 
@@ -98,17 +75,18 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		val_loss = 0.0
 		n_losses = 0
 		for noisy, net_input, mask in val_data_loader:
-			noisy = noisy.to(device)
-			noisy = noisy.float()
+			noisy, net_input, mask = noisy.to(device).float(), net_input.to(device), mask.to(device)
 
 			net_output = net(net_input)
 
 			val_loss += loss_function(net_output*mask, noisy*mask).item()
 			n_losses += 1
+
 		del noisy, net_input, mask, net_output
 
 		val_loss /= n_losses
 		scheduler.step(val_loss)
+
 		print('\nTrain Loss (', e, ' \t', round(train_loss,6), 'val-loss\t', round(val_loss,6))
 		with open('loss.txt', 'a') as f:
 			print(e, ';{:.10f}'.format(train_loss), ';{:.10f}'.format(val_loss), file=f)
