@@ -182,7 +182,7 @@ class SmithData():
 class N2SDataset(SmithData):
 
 	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
-				complete_background_noise=False, masking=False, channels=2, mask_grid_size=4):
+				complete_background_noise=False, masking=False, channels=2, mask_grid_size=4, mask_shape_low='left', mask_shape_high='right', loss_only_channel=-1):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
@@ -192,7 +192,10 @@ class N2SDataset(SmithData):
 		self.masking = masking
 		self.channels = channels
 		self.mask_grid_size = mask_grid_size
+		self.mask_shape_high = mask_shape_high
+		self.mask_shape_low = mask_shape_low
 		self.get_calls = 0
+		self.loss_only_channel = loss_only_channel
 
 	# make it deterministic #TODO better name
 	def test():
@@ -257,7 +260,8 @@ class N2SDataset(SmithData):
 		if self.masking:
 			rng = np.random.default_rng()
 			loss_channel = rng.integers(2)
-			loss_channel=0
+			if self.loss_only_channel != -1:
+				loss_channel = self.loss_only_channel
 			masked_pixel = rng.integers(self.mask_grid_size**2)
 			images = images[:self.channels,::].unsqueeze(0)
 
@@ -268,13 +272,13 @@ class N2SDataset(SmithData):
 				net_input = torch.empty_like(images)
 				zero_mask = torch.zeros(images.shape[-2:])
 				if loss_channel == 1:
-					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction='block')
+					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction=self.mask_shape_low)
 					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel)
 					# only take loss of masking where only one pixel is masked
 					mask = torch.stack([zero_mask, mask_high], axis=-3)
 				else:
 					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel)
-					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction='block')
+					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction=self.mask_shape_high)
 					mask = torch.stack([mask_low, zero_mask], axis=-3)
 			else:
 				return NotImplementedError
