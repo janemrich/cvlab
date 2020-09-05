@@ -99,34 +99,14 @@ def plot_denoise(net, data_loader, device, e, channels):
 	del noisy, denoised, comp
 
 def plot_denoising_masking(noisy, net_input, mask, net_output):
-	plt.figure(1)
-	plt.subplot(251)
-	plt.imshow(noisy[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+	fig = plt.figure()
+	titles = ['noisy low', 'net input low', 'mask low', 'net input - noisy', 'net output', 'noisy high', 'net input high', 'mask high', 'net input - noisy', 'net output']
+	images = [noisy[0,0], net_input[0,0], mask[0,0], net_input[0,0] - noisy[0,0], net_output.detach()[0,0], noisy[0,1], net_input[0,1], mask[0,1], net_input[0,1] - noisy[0,1], net_output.detach()[0,1]]
 
-	plt.subplot(256)
-	plt.imshow(noisy[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-	plt.subplot(252)
-	plt.imshow(net_input[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-	plt.subplot(257)
-	plt.imshow(net_input[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-	plt.subplot(253)
-	plt.imshow(mask[0,0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-	plt.subplot(258)
-	plt.imshow(mask[0,1], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-	plt.subplot(254)
-	plt.imshow(net_input[0,0] - noisy[0,0], interpolation=None, cmap='gray')
-
-	plt.subplot(259)
-	plt.imshow(net_input[0,1] - noisy[0,1], interpolation=None, cmap='gray')
-
-	plt.subplot(255)
-	plt.imshow(net_output[0,0].detach(), interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
-
-	plt.subplot(2,5,10)
-	plt.imshow(net_output[0,1].detach(), interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+	for i, (title, im) in enumerate(zip(titles, images)):
+		ax = fig.add_subplot(2,5,i+1)
+		ax.set_title(title)
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		plt.imshow(im, interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
 	plt.show()

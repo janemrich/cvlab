@@ -254,6 +254,7 @@ class N2SDataset(SmithData):
 			loss_channel = rng.integers(2)
 			masked_pixel = rng.integers(self.mask_grid_size**2)
 			images = images[:self.channels,::].unsqueeze(0)
+
 			masker = Masker(width = self.mask_grid_size, mode='interpolate')
 			if self.channels == 1:
 				net_input, mask = masker.mask(images, masked_pixel)
@@ -261,25 +262,13 @@ class N2SDataset(SmithData):
 				net_input = torch.empty_like(images)
 				zero_mask = torch.zeros(images.shape[-2:])
 				if loss_channel == 1:
-					def plot_this():
-						import matplotlib.pyplot as plt
-						plt.subplot(221)
-						plt.imshow(images[0,0], vmin=0.0, vmax=1.0, interpolation=None, cmap='inferno')
-						plt.subplot(222)
-						plt.imshow(images[0,1], vmin=0.0, vmax=1.0, interpolation=None, cmap='inferno')
-						plt.subplot(223)
-						plt.imshow(net_input[0,0], vmin=0.0, vmax=1.0, interpolation=None, cmap='inferno')
-						plt.subplot(224)
-						plt.imshow(net_input[0,1], vmin=0.0, vmax=1.0, interpolation=None, cmap='inferno')
-						plt.show()
-					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction='right')
+					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction='left')
 					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel)
-					#plot_this()
 					# only take loss of masking where only one pixel is masked
 					mask = torch.stack([zero_mask, mask_high], axis=-3)
 				else:
-					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel) # because high channel is shifted to the left
-					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction='left')
+					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel)
+					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction='right')
 					mask = torch.stack([mask_low, zero_mask], axis=-3)
 			else:
 				return NotImplementedError
