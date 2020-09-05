@@ -51,6 +51,9 @@ if __name__=="__main__":
 	)
 
 	model_type = config['model']
+	if model_type == 'unet':
+		from model import UNet
+		net = UNet(channels, channels, **config.get('model_params', {}))
 	if model_type == 'resnet':
 		from model import ResNet
 		net = ResNet(channels, channels, padding_mode='reflect', **config.get("model_params", {}))# in, out channels

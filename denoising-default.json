@@ -1,8 +1,8 @@
 {
 	"model": "n2s-unet",
 	"model_params": {
-		"up": "bilinear",
-		"residual": false
+		"residual": false,
+		"activation": "leakyrelu"
 	},
 	"channels": 2,
 	"train": {
