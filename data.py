@@ -261,14 +261,26 @@ class N2SDataset(SmithData):
 				net_input = torch.empty_like(images)
 				zero_mask = torch.zeros(images.shape[-2:])
 				if loss_channel == 1:
-					net_input[:,:1,:,:], mask_high = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction='right')
-					net_input[:,1:,:,:], mask_low = masker.mask(images[:,1:,:,:], masked_pixel)
+					def plot_this():
+						import matplotlib.pyplot as plt
+						plt.subplot(221)
+						plt.imshow(images[0,0], vmin=0.0, vmax=1.0, interpolation=None, cmap='inferno')
+						plt.subplot(222)
+						plt.imshow(images[0,1], vmin=0.0, vmax=1.0, interpolation=None, cmap='inferno')
+						plt.subplot(223)
+						plt.imshow(net_input[0,0], vmin=0.0, vmax=1.0, interpolation=None, cmap='inferno')
+						plt.subplot(224)
+						plt.imshow(net_input[0,1], vmin=0.0, vmax=1.0, interpolation=None, cmap='inferno')
+						plt.show()
+					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction='right')
+					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel)
+					#plot_this()
 					# only take loss of masking where only one pixel is masked
-					mask = torch.stack([zero_mask, mask_low], axis=-3)
+					mask = torch.stack([zero_mask, mask_high], axis=-3)
 				else:
-					net_input[:,:1,:,:], mask_high = masker.mask(images[:,:1,:,:], masked_pixel) # because high channel is shifted to the left
-					net_input[:,1:,:,:], mask_low = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction='left')
-					mask = torch.stack([mask_high, zero_mask], axis=-3)
+					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel) # because high channel is shifted to the left
+					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction='left')
+					mask = torch.stack([mask_low, zero_mask], axis=-3)
 			else:
 				return NotImplementedError
 			

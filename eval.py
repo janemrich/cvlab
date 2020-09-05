@@ -75,6 +75,7 @@ def plot_denoise(net, data_loader, device, e, channels):
 	noisy, denoised = noisy.cpu(), denoised.cpu()
 	comp = np.concatenate([noisy, denoised], axis=-2)
 	if channels == 2:
+		# [low, high]
 		comp = np.concatenate([comp[:,:1,:,:], comp[:,1:,:,:]], axis=-1)
 
 	n_pics = 3
