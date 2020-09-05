@@ -192,6 +192,7 @@ class N2SDataset(SmithData):
 		self.masking = masking
 		self.channels = channels
 		self.mask_grid_size = mask_grid_size
+		self.get_calls = 0
 
 	# make it deterministic #TODO better name
 	def test():
@@ -230,6 +231,10 @@ class N2SDataset(SmithData):
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 
 	def __getitem__(self, idx):
+		self.get_calls += 1
+		if self.get_calls > self.__len__():
+			self.reset()
+
 		idx_img = idx // self.patches_per_image
 		idx_patch = idx % self.patches_per_image
 		
@@ -252,6 +257,7 @@ class N2SDataset(SmithData):
 		if self.masking:
 			rng = np.random.default_rng()
 			loss_channel = rng.integers(2)
+			loss_channel=0
 			masked_pixel = rng.integers(self.mask_grid_size**2)
 			images = images[:self.channels,::].unsqueeze(0)
 
@@ -262,13 +268,13 @@ class N2SDataset(SmithData):
 				net_input = torch.empty_like(images)
 				zero_mask = torch.zeros(images.shape[-2:])
 				if loss_channel == 1:
-					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction='left')
+					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction='block')
 					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel)
 					# only take loss of masking where only one pixel is masked
 					mask = torch.stack([zero_mask, mask_high], axis=-3)
 				else:
 					net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel)
-					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction='right')
+					net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction='block')
 					mask = torch.stack([mask_low, zero_mask], axis=-3)
 			else:
 				return NotImplementedError

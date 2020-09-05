@@ -2,14 +2,14 @@
 	"model": "n2s-unet",
 	"model_params": {
 		"up": "bilinear",
-		"residual": true
+		"residual": false
 	},
 	"channels": 2,
 	"train": {
 		"learn_rate": 0.001,
 		"batch_size": 8,
 		"epochs": 200,
-		"mask_grid_size": 4,
+		"mask_grid_size": 6,
 		"fade_threshold": 0
 	},
 	"dataset": {

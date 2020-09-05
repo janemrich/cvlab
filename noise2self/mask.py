@@ -20,12 +20,31 @@ class Masker():
 
         mask = pixel_grid_mask(X[0, 0].shape, self.grid_size, phasex, phasey)
 
-        ### makes mask with two pixels next to each other
-        if pair and pair_direction == 'right':
-            # mask the pixel on the right as well
-            mask[:,1:] += mask.clone()[:,:-1]
-        elif pair and pair_direction == 'left':
-            mask[:,:-1] += mask.clone()[:,1:]
+        if pair:
+            orig_mask = mask.clone()
+            ### makes mask with two pixels next to each other
+            if pair_direction == 'right':
+                # mask the pixel on the right as well
+                mask[:,1:] += orig_mask[:,:-1]
+            elif pair_direction == 'left':
+                mask[:,:-1] += orig_mask[:,1:]
+            elif pair_direction == 'both':
+                mask[:,1:] += orig_mask[:,:-1]
+                mask[:,:-1] += orig_mask[:,1:]
+            elif pair_direction == 'up_and_down':
+                mask[1:,:] += orig_mask[:-1,:]
+                mask[:-1,:] += orig_mask[1:,:]
+            elif pair_direction == 'all':
+                mask[:,1:] += orig_mask[:,:-1]
+                mask[:,:-1] += orig_mask[:,1:]
+                mask[1:,:] += orig_mask[:-1,:]
+                mask[:-1,:] += orig_mask[1:,:]
+            elif pair_direction == 'block':
+                mask[:,1:] += orig_mask[:,:-1]
+                mask[:,:-1] += orig_mask[:,1:]
+                hor_mask = mask.clone()
+                mask[1:,:] += hor_mask[:-1,:]
+                mask[:-1,:] += hor_mask[1:,:]
 
         mask = mask.to(X.device)
 
@@ -86,21 +105,13 @@ def interpolate_mask(tensor, mask, mask_inv):
 
     mask = mask.to(device)
 
-    # adapt to one or two channels
-    if tensor.shape[-3] == 1:
-        kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
-        kernel = kernel[np.newaxis, np.newaxis, :, :]
-    elif tensor.shape[-3] == 2:
-        kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
-        stack = np.stack([kernel, kernel], axis=0)
-        kernel = stack[np.newaxis, :, :, :]
-    else:
-        return NotImplementedError
+    kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
+    kernel = kernel[np.newaxis, np.newaxis, :, :]
 
     kernel = torch.Tensor(kernel).to(device)
     kernel = kernel / kernel.sum()
 
     #filtered_tensor = torch.nn.functional.conv2d(tensor, kernel.double(), stride=1, padding=1)
-    filtered_tensor = torch.nn.functional.conv2d(torch.nn.ReplicationPad2d(1)(tensor*mask_inv), kernel, stride=1)
+    filtered_tensor = torch.nn.functional.conv2d(torch.nn.ReplicationPad2d(1)(tensor*mask_inv + torch.full_like(tensor, 0.5).to(device) * mask), kernel, stride=1)
 
     return filtered_tensor * mask + tensor * mask_inv
