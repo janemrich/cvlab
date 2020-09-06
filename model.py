@@ -94,7 +94,7 @@ class UpSkip(nn.Module):
 			)
 		
 		self.conv = nn.Sequential(
-			ConvBlock(in_channels*2, out_channels, 3, activation=activation),
+			ConvBlock(in_channels+in_channels // 2, out_channels, 3, activation=activation),
 			ConvBlock(out_channels, out_channels, 3, activation=activation)
 		)
 
