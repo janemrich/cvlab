@@ -1,19 +1,18 @@
 {
-	"model": "n2s-unet",
+	"model": "unet",
 	"model_params": {
-		"residual": false,
 		"activation": "leakyrelu"
 	},
 	"channels": 2,
 	"train": {
-		"learn_rate": 0.001,
+		"learn_rate": 0.0001,
 		"batch_size": 8,
-		"epochs": 200,
+		"epochs": 20,
 		"mask_grid_size": 6,
 		"fade_threshold": 0
 	},
 	"dataset": {
-		"target_size": [32, 32],
+		"target_size": [128, 128],
 		"masking": true,
 		"mask_shape_low": "left",
 		"mask_shape_high": "right",

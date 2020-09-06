@@ -12,7 +12,7 @@ import progress
 from eval import plot_denoise
 from eval import plot_denoising_masking
 
-def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.001, **kwargs):
+def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.0001, **kwargs):
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
@@ -27,7 +27,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
 	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
 
-	optimizer_args_default = {'lr': learn_rate * (batch_size/32) * (mask_grid_size**2 / 4**2)}
+	optimizer_args_default = {'lr': learn_rate * (batch_size/32)}
 	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
 	
 	scheduler_args_default = {"patience":1, "cooldown":4}
@@ -46,6 +46,8 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		bar = progress.Bar("Epoch {}, train".format(e), finish=train_size)
 		net.train()
 
+		mask_loss_factor = mask_grid_size**2
+
 		train_loss = 0.0
 		n_losses = 0
 		for noisy, net_input, mask in dataloader:
@@ -59,6 +61,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 			fade_factor = fade(noisy*mask)
 
 			loss = loss_function(net_output*mask*fade_factor, noisy*mask*fade_factor)
+			loss = loss * mask_loss_factor
 			train_loss += loss.item()
 			n_losses += 1
 
@@ -79,7 +82,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 			net_output = net(net_input)
 
-			val_loss += loss_function(net_output*mask, noisy*mask).item()
+			val_loss += loss_function(net_output*mask, noisy*mask).item() * mask_loss_factor
 			n_losses += 1
 
 		del noisy, net_input, mask, net_output
