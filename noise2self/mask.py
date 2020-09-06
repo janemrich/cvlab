@@ -45,6 +45,8 @@ class Masker():
                 hor_mask = mask.clone()
                 mask[1:,:] += hor_mask[:-1,:]
                 mask[:-1,:] += hor_mask[1:,:]
+            else:
+                pass
 
         mask = mask.to(X.device)
 
