@@ -262,37 +262,12 @@ class N2SDataset(SmithData):
 			masked_pixel = rng.integers(self.mask_grid_size**2)
 
 			masker = Masker(width = self.mask_grid_size, mode='interpolate')
-			return masker.mask_channels(images[:self.channels,::], masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+			if self.channels == 1:
+				return masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+			if self.channels == 2:
+				return masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
 
-		# if self.masking:
-			# rng = np.random.default_rng()
-			# loss_channel = rng.integers(2)
-			# if self.loss_only_channel != -1:
-				# loss_channel = self.loss_only_channel
-			# masked_pixel = rng.integers(self.mask_grid_size**2)
-			# images = images[:self.channels,::].unsqueeze(0)
-
-			# masker = Masker(width = self.mask_grid_size, mode='interpolate')
-			# if self.channels == 1:
-				# net_input, mask = masker.mask(images, masked_pixel)
-			# elif self.channels == 2:
-				# net_input = torch.empty_like(images)
-				# zero_mask = torch.zeros(images.shape[-2:])
-				# if loss_channel == 1:
-					# net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel, pair=True, pair_direction=self.mask_shape_low)
-					# net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel)
-					# only take loss of masking where only one pixel is masked
-					# mask = torch.stack([zero_mask, mask_high], axis=-3)
-				# else:
-					# net_input[:,:1,:,:], mask_low = masker.mask(images[:,:1,:,:], masked_pixel)
-					# net_input[:,1:,:,:], mask_high = masker.mask(images[:,1:,:,:], masked_pixel, pair=True, pair_direction=self.mask_shape_high)
-					# mask = torch.stack([mask_low, zero_mask], axis=-3)
-			# else:
-				# return NotImplementedError
-			
-			# return images.squeeze(0), net_input.squeeze(0), mask
-
-		return images[:channels,:,:]
+		return images[:self.channels,:,:]
 
 	def __len__(self):
 		return super(N2SDataset, self).__len__() * self.patches_per_image

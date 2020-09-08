@@ -34,9 +34,7 @@ class Masker():
             else:
                 pass
 
-        mask = mask.to(X.device)
-
-        mask_inv = torch.ones(mask.shape).to(X.device) - mask
+        mask_inv = torch.ones(mask.shape) - mask
 
         if self.mode == 'interpolate':
             masked = interpolate_mask(X, mask, mask_inv)
@@ -61,14 +59,9 @@ class Masker():
         x = x.unsqueeze(0)
         net_input = torch.empty_like(x)
 
-        channels = x.shape[-3]
-        if channels == 1:
-            net_input, mask = self.mask(x, i)
-        elif channels == 2:
-            net_input = torch.empty_like(x)
-            net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
-            net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
-            mask = torch.stack([mask_low, mask_high], axis=-3)
+        net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
+        net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
+        mask = torch.stack([mask_low, mask_high], axis=-3)
 
         return x.squeeze(0), net_input.squeeze(0), mask
 				
@@ -80,7 +73,7 @@ class Masker():
 
         if self.infer_single_pass:
             if self.include_mask_as_input:
-                net_input = torch.cat((X, torch.zeros(X[:, 0:1].shape).to(X.device)), dim=1)
+                net_input = torch.cat((X, torch.zeros(X[:, 0:1].shape)), dim=1)
             else:
                 net_input = X
             net_output = model(net_input)
@@ -110,17 +103,13 @@ def pixel_grid_mask(shape, patch_size, phase_x, phase_y):
 
 
 def interpolate_mask(tensor, mask, mask_inv):
-    device = tensor.device
-
-    mask = mask.to(device)
 
     kernel = np.array([[0.5, 1.0, 0.5], [1.0, 0.0, 1.0], (0.5, 1.0, 0.5)])
     kernel = kernel[np.newaxis, np.newaxis, :, :]
 
-    kernel = torch.Tensor(kernel).to(device)
+    kernel = torch.Tensor(kernel)
     kernel = kernel / kernel.sum()
 
-    #filtered_tensor = torch.nn.functional.conv2d(tensor, kernel.double(), stride=1, padding=1)
-    filtered_tensor = torch.nn.functional.conv2d(torch.nn.ReplicationPad2d(1)(tensor*mask_inv + torch.full_like(tensor, 0.5).to(device) * mask), kernel, stride=1)
+    filtered_tensor = torch.nn.functional.conv2d(torch.nn.ReplicationPad2d(1)(tensor*mask_inv + torch.full_like(tensor, 0.5) * mask), kernel, stride=1)
 
     return filtered_tensor * mask + tensor * mask_inv
