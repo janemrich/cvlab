@@ -182,7 +182,7 @@ class SmithData():
 class N2SDataset(SmithData):
 
 	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
-				complete_background_noise=False, masking=False, pair=False, channels=2, mask_grid_size=4, mask_shape_low='left', mask_shape_high='right', loss_only_channel=-1):
+				complete_background_noise=False, masking=False, channels=2, mask_grid_size=4, mask_shape_low=None, mask_shape_high=None, loss_only_channel=-1):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
@@ -190,7 +190,6 @@ class N2SDataset(SmithData):
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 		self.drop_background = drop_background
 		self.masking = masking
-		self.pair = pair
 		self.channels = channels
 		self.mask_grid_size = mask_grid_size
 		self.mask_shape_high = mask_shape_high
@@ -258,24 +257,12 @@ class N2SDataset(SmithData):
 		# images = patch[:, :, :-1]
 		images = torch.tensor(patch[:, :, :-1], dtype=torch.float)
 
-		def mask(x, mask_grid_size, channels, pair=False, mask_shape_low=None, mask_shape_high=None):
+		if self.masking:
 			rng = np.random.default_rng()
-			masked_pixel = rng.integers(mask_grid_size**2)
-
-			x = x[:channels,::].unsqueeze(0)
+			masked_pixel = rng.integers(self.mask_grid_size**2)
 
 			masker = Masker(width = self.mask_grid_size, mode='interpolate')
-			if channels == 1:
-				net_input, mask = masker.mask(x, masked_pixel)
-			elif channels == 2:
-				net_input = torch.empty_like(x)
-				net_input[:, :1, :, :], mask_low = masker.mask(x[:, :1, :, :], masked_pixel, pair, pair_direction=mask_shape_low)
-				net_input[:, 1:, :, :], mask_high = masker.mask(x[:, 1:, :, :], masked_pixel, pair, pair_direction=mask_shape_high)
-				mask = torch.stack([mask_low, mask_high], axis=-3)
-			return images.squeeze(0), net_input.squeeze(0), mask
-				
-		if self.masking:
-			return mask(images, self.mask_grid_size, self.channels, pair=self.pair, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+			return masker.mask_channels(images[:self.channels,::], masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
 
 		# if self.masking:
 			# rng = np.random.default_rng()
@@ -305,7 +292,7 @@ class N2SDataset(SmithData):
 			
 			# return images.squeeze(0), net_input.squeeze(0), mask
 
-		return images
+		return images[:channels,:,:]
 
 	def __len__(self):
 		return super(N2SDataset, self).__len__() * self.patches_per_image

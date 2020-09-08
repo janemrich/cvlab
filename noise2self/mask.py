@@ -13,38 +13,24 @@ class Masker():
         self.infer_single_pass = infer_single_pass
         self.include_mask_as_input = include_mask_as_input
 
-    def mask(self, X, i, pair=False, pair_direction='right'):
+    def mask(self, X, i, mask_shape=None):
 
         phasex = i % self.grid_size
         phasey = (i // self.grid_size) % self.grid_size
 
         mask = pixel_grid_mask(X[0, 0].shape, self.grid_size, phasex, phasey)
 
-        if pair:
+        if mask_shape:
             orig_mask = mask.clone()
             ### makes mask with two pixels next to each other
-            if pair_direction == 'right':
+            if mask_shape == 'right':
                 # mask the pixel on the right as well
                 mask[:,1:] += orig_mask[:,:-1]
-            elif pair_direction == 'left':
+            elif mask_shape == 'left':
                 mask[:,:-1] += orig_mask[:,1:]
-            elif pair_direction == 'both':
+            elif mask_shape == 'both':
                 mask[:,1:] += orig_mask[:,:-1]
                 mask[:,:-1] += orig_mask[:,1:]
-            elif pair_direction == 'up_and_down':
-                mask[1:,:] += orig_mask[:-1,:]
-                mask[:-1,:] += orig_mask[1:,:]
-            elif pair_direction == 'all':
-                mask[:,1:] += orig_mask[:,:-1]
-                mask[:,:-1] += orig_mask[:,1:]
-                mask[1:,:] += orig_mask[:-1,:]
-                mask[:-1,:] += orig_mask[1:,:]
-            elif pair_direction == 'block':
-                mask[:,1:] += orig_mask[:,:-1]
-                mask[:,:-1] += orig_mask[:,1:]
-                hor_mask = mask.clone()
-                mask[1:,:] += hor_mask[:-1,:]
-                mask[:-1,:] += hor_mask[1:,:]
             else:
                 pass
 
@@ -65,6 +51,27 @@ class Masker():
             net_input = masked
 
         return net_input, mask
+
+    """
+    masks multiple channels
+
+    assumes X has 3 dimensions with channels
+    """
+    def mask_channels(self, x, i, mask_shape_low=None, mask_shape_high=None):
+        x = x.unsqueeze(0)
+        net_input = torch.empty_like(x)
+
+        channels = x.shape[-3]
+        if channels == 1:
+            net_input, mask = self.mask(x, i)
+        elif channels == 2:
+            net_input = torch.empty_like(x)
+            net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
+            net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
+            mask = torch.stack([mask_low, mask_high], axis=-3)
+
+        return x.squeeze(0), net_input.squeeze(0), mask
+				
 
     def __len__(self):
         return self.n_masks
