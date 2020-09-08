@@ -120,11 +120,12 @@ class OutConv(nn.Module):
 
 
 class UNet(nn.Module):
-	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False, dilation=False, downsampling='maxpool'):
+	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False, dilation=False, downsampling='maxpool', residual_droput=False):
 		super(UNet, self).__init__()
 		self.n_channels = n_channels
 		self.bilinear = bilinear
 		self.residual = residual
+		self.residual_dropout = residual_droput
 
 		self.inconv = nn.Sequential(
 			ConvBlock(n_channels, hidden[0], 3, activation=activation, padding_mode=padding_mode, dilation=dilation),
@@ -133,6 +134,8 @@ class UNet(nn.Module):
 		self.down_convs = nn.ModuleList([Down(i, o, downsampling=downsampling) for i, o in zip(hidden[:-1], hidden[1:])])
 		self.up_convs = nn.ModuleList([UpSkip(i, o, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))])
 		self.outconv = nn.Conv2d(hidden[0], n_channels, kernel_size=1)
+		if self.residual_dropout:
+			self.res_drop = nn.Dropout(p=0.5)
 
 	def forward(self, x):
 		if self.residual:
@@ -148,6 +151,8 @@ class UNet(nn.Module):
 		out = self.outconv(out)
 		
 		if self.residual:
+			if self.residual_dropout:
+				x_in = self.res_drop(x_in)
 			out = out + x_in
 
 		return out 
