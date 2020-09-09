@@ -263,15 +263,156 @@ class N2SDataset(SmithData):
 
 			masker = Masker(width = self.mask_grid_size, mode='interpolate')
 			if self.channels == 1:
-				return masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+				return images, masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
 			if self.channels == 2:
-				return masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+				return images, masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
 
 		return images[:self.channels,:,:]
 
 	def __len__(self):
 		return super(N2SDataset, self).__len__() * self.patches_per_image
 
+
+class N2SProDemosaicDataset(SmithData):
+	"""
+		Args:
+			fill_missing: 'zero', 'same' or 'interp'
+	"""
+	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, drop_background=True, renewing_patches=False, fill_missing='same', has_rgb=True,
+					complete_background_noise=False, mask_grid_size=4, mask_shape_sharp_low=None, mask_shape_sharp_high=None, mask_shape_pro_low=None, mask_shape_pro_high=None):
+		super(N2SProDemosaicDataset, self).__init__(root, invert, crop, sharp=True, has_rgb=has_rgb, complete_background_noise=complete_background_noise)
+		self.patch_rows = target_size[1]
+		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
+		self.patches_per_image = patches_per_image
+		self.patches_positions = [[]] * super(N2SProDemosaicDataset, self).__len__()
+		self.fill_missing=fill_missing
+
+		self.drop_background = drop_background
+		self.renewing_patches = renewing_patches
+		self.get_calls = 0
+		# denoising
+		self.mask_grid_size = mask_grid_size
+		self.mask_shape_sharp_high = mask_shape_sharp_high
+		self.mask_shape_sharp_low = mask_shape_sharp_low
+		self.mask_shape_pro_high = mask_shape_pro_high
+		self.mask_shape_pro_low = mask_shape_pro_low
+
+	def create_patches(self, idx, pro, patch_shape):
+		"""Creates a list of top left points of random patches for image idx and saves them to patches_positions"""
+		# cut a random patch from the image	
+		shift_row = 0
+		shift_col = 0	
+		pro_shape = pro.shape
+
+		diff_row = pro_shape[1] - patch_shape[1]
+		diff_col = pro_shape[2] - patch_shape[2]
+		
+		positions = []
+		fail_count = 0
+		max_fails = 10
+		while len(positions) < self.patches_per_image:	
+			if diff_row > 0:
+				shift_row = random.randrange(diff_row)
+			if diff_col > 0:
+				shift_col = random.randrange(diff_col)
+			if self.drop_background and np.mean(pro[0, shift_row:shift_row+patch_shape[1], shift_col:shift_col+patch_shape[2]]) < 0.05 and fail_count < max_fails:
+				fail_count += 1
+				continue
+			positions.append((shift_row, shift_col))
+		
+		self.patches_positions[idx]= positions
+		# self.patches_positions = [[(400, 200)*self.patches_per_image], [(400, 200)*self.patches_per_image]]
+
+	def reset(self):
+		self.patches_positions = [[]] * super(N2SProDemosaicDataset, self).__len__()
+	
+	def gen_sharp(self, patch):
+		if patch.shape[-1] % 2 == 0:
+			patch = patch[:, :, :-1]
+		patch_high = patch[0, :, :-1]
+		patch_low = patch[0, :, 1:]
+
+		sharp_sparse = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)))
+		sharp = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)*2))
+
+		sharp_sparse[1, :, :] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
+		sharp_sparse[0, :, :] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
+		
+		sharp[1, :, 0::2] = sharp_sparse[1, :, :]
+		sharp[0, :, 1::2] = sharp_sparse[0, :, :]
+
+		if self.fill_missing == 'same':
+			sharp[:, :, 1:] += sharp[:, :, :-1]
+
+		elif self.fill_missing == 'interp':
+			raise NotImplementedError
+		
+		else:
+			raise ValueError("Unknown fill value {}".format(self.fill_missing))
+
+		# from eval import plot_sharp_masking
+		# plot_sharp_masking(patch, patch_low, patch_high, sharp_sparse, sharp)
+
+		
+		return sharp[:, :, 1:]
+
+
+	def __getitem__(self, idx):
+		if self.renewing_patches:
+			self.get_calls += 1
+			if self.get_calls > self.__len__():
+				self.reset()
+
+		idx_img = idx // self.patches_per_image
+		idx_patch = idx % self.patches_per_image
+		
+		pro = super(N2SProDemosaicDataset, self).__getitem__(idx_img)
+		patch = np.zeros((2, self.patch_rows, self.patch_cols))
+		
+		if len(self.patches_positions[idx_img]) <= idx_patch:
+			# we did not generate the random patch positions for this image yet
+			self.create_patches(idx_img, pro, patch.shape) 
+
+		shift_row, shift_col = self.patches_positions[idx_img][idx_patch]
+		# if patch is larger than image in a dimension, we make sure to stay in array range
+		patch = pro[:,
+			shift_row:shift_row+patch.shape[1]-min(pro.shape[1] - patch.shape[1], 0),
+			shift_col:shift_col+patch.shape[2]-min(pro.shape[2] - patch.shape[2], 0)]
+
+		patch = torch.tensor(patch, dtype=torch.float)
+
+		sharp = torch.tensor(self.gen_sharp(patch), dtype=torch.float)
+		pro = torch.tensor(patch, dtype=torch.float)
+
+		pro = pro[:, :, 2:-1]
+		sharp = sharp[:, :, 1:]
+		# pro = patch
+		# from eval import plot_tensors
+		# plot_tensors([pro, sharp])
+
+		rng = np.random.default_rng()
+		masked_pixel = rng.integers(self.mask_grid_size**2/2)
+
+		masker = Masker(width = self.mask_grid_size, mode='interpolate')
+		net_input, mask = masker.mask_channels(sharp, masked_pixel, mask_shape_low=self.mask_shape_sharp_low, mask_shape_high=self.mask_shape_sharp_high, demosaicing=True)
+		# _, mask = masker.mask_channels(sharp, masked_pixel*2, mask_shape_low=self.mask_shape_pro_low, mask_shape_high=self.mask_shape_pro_high, demosaicing=True)
+
+		from eval import plot_tensors
+		plot_tensors([pro, net_input, sharp])
+
+		return pro, net_input, mask
+
+	def get_full(self, idx):
+		"""Does not do patching."""
+		pro = super(N2SProDemosaicDataset, self).__getitem__(idx)
+		sharp = self.gen_sharp(pro)
+		pro = torch.tensor(pro[:, :, :sharp.shape[-1]], dtype=torch.float)
+		sharp = torch.tensor(sharp, dtype=torch.float)
+
+		return sharp, pro, super(N2SProDemosaicDataset, self).get_rgb(idx)
+
+	def __len__(self):
+		return super(N2SProDemosaicDataset, self).__len__() * self.patches_per_image
 
 
 class ProDemosaicDataset(SmithData):

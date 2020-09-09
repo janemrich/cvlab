@@ -55,16 +55,23 @@ class Masker():
 
     assumes X has 3 dimensions with channels
     """
-    def mask_channels(self, x, i, mask_shape_low=None, mask_shape_high=None):
+    def mask_channels(self, x, i, mask_shape_low=None, mask_shape_high=None, demosaicing=False):
         x = x.unsqueeze(0)
         net_input = torch.empty_like(x)
 
-        net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
-        net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
+        if demosaicing:
+            if mask_shape_high == None:
+                mask_shape_high = 'right'
+            if mask_shape_low == None:
+                mask_shape_low = 'left'
+            net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], 2*i+1, mask_shape=mask_shape_low)
+            net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], 2*i, mask_shape=mask_shape_high)
+        else:
+            net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
+            net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
         mask = torch.stack([mask_low, mask_high], axis=-3)
 
-        return x.squeeze(0), net_input.squeeze(0), mask
-				
+        return net_input.squeeze(0), mask
 
     def __len__(self):
         return self.n_masks

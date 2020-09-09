@@ -70,7 +70,8 @@ def plot_denoise(net, data_loader, device, e, channels):
 	noisy, net_input, mask = next(iter(data_loader))
 	noisy = noisy.to(device)
 	noisy = noisy.float()
-	denoised = net(noisy[:,:channels,::]).detach()
+	# denoised = net(noisy[:,:channels,::]).detach()
+	denoised = net(noisy).detach()
 	noisy = noisy[:,:channels,::]
 	noisy, denoised = noisy.cpu(), denoised.cpu()
 	comp = np.concatenate([noisy, denoised], axis=-2)
@@ -109,4 +110,32 @@ def plot_denoising_masking(noisy, net_input, mask, net_output):
 		ax.get_xaxis().set_visible(False)
 		ax.get_yaxis().set_visible(False)
 		plt.imshow(im, interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+	plt.show()
+
+def plot_sharp_masking(patch, patch_low, patch_high, sharp_sparse, sharp):
+	fig = plt.figure()
+	titles = ['orig patch low', 'patch low', 'sparse low', 'sparse low', 'orig patch high', 'patch high', 'sparse high', 'sharp high']
+	tensors = [patch[0], patch_low, sharp_sparse[0], sharp[0], patch[1], patch_high,  sharp_sparse[1], sharp[1]]
+
+	for i, (title, im) in enumerate(zip(titles, tensors)):
+		ax = fig.add_subplot(2,4,i+1)
+		ax.set_title(title)
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		plt.imshow(im, interpolation=None, vmin=0.0, vmax=1.0, cmap='inferno')
+	plt.show()
+
+def plot_tensors(tensors):
+	fig = plt.figure()
+
+	for i, im in enumerate(tensors):
+		ax = fig.add_subplot(tensors.__len__(), tensors[0].shape[-3], 2*i+1)
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		plt.imshow(im[0], interpolation=None, vmin=0.0, vmax=1.0, cmap='inferno')
+
+		ax = fig.add_subplot(tensors.__len__(), tensors[0].shape[-3], 2*i+2)
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		plt.imshow(im[1], interpolation=None, vmin=0.0, vmax=1.0, cmap='inferno')
 	plt.show()
