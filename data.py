@@ -386,19 +386,12 @@ class N2SProDemosaicDataset(SmithData):
 
 		pro = pro[:, :, 2:-1]
 		sharp = sharp[:, :, 1:]
-		# pro = patch
-		# from eval import plot_tensors
-		# plot_tensors([pro, sharp])
 
 		rng = np.random.default_rng()
-		masked_pixel = rng.integers(self.mask_grid_size**2/2)
+		masked_pixel = rng.integers(self.mask_grid_size**2)
 
 		masker = Masker(width = self.mask_grid_size, mode='interpolate')
 		net_input, mask = masker.mask_channels(sharp, masked_pixel, mask_shape_low=self.mask_shape_sharp_low, mask_shape_high=self.mask_shape_sharp_high, demosaicing=True)
-		# _, mask = masker.mask_channels(sharp, masked_pixel*2, mask_shape_low=self.mask_shape_pro_low, mask_shape_high=self.mask_shape_pro_high, demosaicing=True)
-
-		from eval import plot_tensors
-		plot_tensors([pro, net_input, sharp])
 
 		return pro, net_input, mask
 
