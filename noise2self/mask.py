@@ -60,12 +60,14 @@ class Masker():
         net_input = torch.empty_like(x)
 
         if demosaicing:
-            if mask_shape_high == None:
-                mask_shape_high = 'right'
-            if mask_shape_low == None:
+            if (i % self.grid_size) % 2 == 0:
                 mask_shape_low = 'left'
-            net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], 2*i+1, mask_shape=mask_shape_low)
-            net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], 2*i, mask_shape=mask_shape_high)
+                mask_shape_high = 'right'
+            else:
+                mask_shape_low = 'right'
+                mask_shape_high = 'left'
+            net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
+            net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
         else:
             net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
             net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
