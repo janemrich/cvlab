@@ -104,7 +104,7 @@ def pixel_grid_mask(shape, patch_size, phase_x, phase_y):
     A = torch.zeros(shape[-2:])
     for i in range(shape[-2]):
         for j in range(shape[-1]):
-            if (i % patch_size == phase_x and j % patch_size == phase_y):
+            if (i % patch_size == phase_y and j % patch_size == phase_x):
                 A[i, j] = 1
     return torch.Tensor(A)
 
