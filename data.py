@@ -329,7 +329,7 @@ class N2SProDemosaicDataset(SmithData):
 	def gen_sharp(self, patch):
 		if patch.shape[-1] % 2 == 0:
 			patch = patch[:, :, :-1]
-		patch_high = patch[0, :, :-1]
+		patch_high = patch[1, :, :-1]
 		patch_low = patch[0, :, 1:]
 
 		sharp_sparse = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)))
@@ -353,7 +353,6 @@ class N2SProDemosaicDataset(SmithData):
 		# from eval import plot_sharp_masking
 		# plot_sharp_masking(patch, patch_low, patch_high, sharp_sparse, sharp)
 
-		
 		return sharp[:, :, 1:]
 
 
@@ -453,17 +452,20 @@ class ProDemosaicDataset(SmithData):
 	def gen_sharp(self, patch):
 		if patch.shape[-1] % 2 == 0:
 			patch = patch[:, :, :-1]
-		patch_high = patch[0, :, :-1]
-		patch_low = patch[1, :, 1:]
+		patch_high = patch[1, :, :-1]
+		patch_low = patch[0, :, 1:]
 
+		sharp_sparse = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)))
 		sharp = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)*2))
 
-		sharp[0, :, 0::2] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
-		sharp[1, :, 1::2] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
+		sharp_sparse[1, :, :] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
+		sharp_sparse[0, :, :] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
 		
+		sharp[1, :, 0::2] = sharp_sparse[1, :, :]
+		sharp[0, :, 1::2] = sharp_sparse[0, :, :]
+
 		if self.fill_missing == 'same':
-			sharp[0, :, 1::2] = sharp[0, :, 0::2]
-			sharp[1, :, 0::2] = sharp[1, :, 1::2]
+			sharp[:, :, 1:] += sharp[:, :, :-1]
 
 		elif self.fill_missing == 'interp':
 			raise NotImplementedError
@@ -471,7 +473,7 @@ class ProDemosaicDataset(SmithData):
 		else:
 			raise ValueError("Unknown fill value {}".format(self.fill_missing))
 		
-		return sharp
+		return sharp[:, :, 1:]
 
 
 	def __getitem__(self, idx):
@@ -491,8 +493,13 @@ class ProDemosaicDataset(SmithData):
 			shift_row:shift_row+patch.shape[1]-min(pro.shape[1] - patch.shape[1], 0),
 			shift_col:shift_col+patch.shape[2]-min(pro.shape[2] - patch.shape[2], 0)]
 
+		patch = torch.tensor(patch, dtype=torch.float)
+
 		sharp = torch.tensor(self.gen_sharp(patch), dtype=torch.float)
-		pro = torch.tensor(patch[:, :, :-1], dtype=torch.float)
+		pro = torch.tensor(patch, dtype=torch.float)
+
+		pro = pro[:, :, 2:-1]
+		sharp = sharp[:, :, 1:]
 
 		return sharp, pro
 

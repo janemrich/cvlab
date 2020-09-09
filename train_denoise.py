@@ -39,7 +39,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 	net.to(device)
 	loss_function.to(device)
 
-	plot_denoise(net, test_data_loader, device, 0, channels)
+	# plot_denoise(net, test_data_loader, device, 0, channels)
 
 	# training
 	for e in range(epochs):
@@ -53,14 +53,16 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		for noisy, net_input, mask in dataloader:
 			noisy, net_input, mask = noisy.to(device), net_input.to(device), mask.to(device)
 
+			# plot_denoising_masking(noisy, net_input, mask, torch.zeros_like(noisy))
 			net_output = net(net_input)
 
-			#plot_denoising_masking(noisy, net_input, mask, net_output)
+			# plot_denoising_masking(noisy, net_input, mask, net_output)
 
-			fade = transforms.Lambda(lambda x: fading_loss(x, threshold_from_end=fade_threshold))
-			fade_factor = fade(noisy*mask)
+			# fade = transforms.Lambda(lambda x: fading_loss(x, threshold_from_end=fade_threshold))
+			# fade_factor = fade(noisy*mask)
 
-			loss = loss_function(net_output*mask*fade_factor, noisy*mask*fade_factor)
+			# loss = loss_function(net_output*mask*fade_factor, noisy*mask*fade_factor)
+			loss = loss_function(net_output*mask, noisy*mask)
 			loss = loss * mask_loss_factor
 			train_loss += loss.item()
 			n_losses += 1
