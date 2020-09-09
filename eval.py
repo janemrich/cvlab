@@ -1,4 +1,4 @@
-from data import ProDemosaicDataset, ProColoringDataset
+from data import ProDemosaicDataset, ProColoringDataset, N2SProDemosaicDataset
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 import numpy as np
@@ -54,6 +54,29 @@ def evaluate_smithdata(dataset, model, resdir, device, step, n_images=4):
 	Y_ = model(X).cpu().detach().numpy()
 	
 	comp = np.concatenate([X.cpu().detach().numpy(), Y_, Y], axis=-2)
+
+	fig = plt.figure(figsize=(3*n_images, 8))
+	fig.suptitle('top: IN, middle: OUT, bottom: GT', fontsize=16)
+	for j in range(n_images):
+		ax1 = fig.add_subplot(1,n_images,j+1)
+		ax1.get_xaxis().set_visible(False)
+		ax1.get_yaxis().set_visible(False)
+		ax1.set_title("image {}".format(j))
+		ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
+		
+	plt.savefig(os.path.join(resdir, "eval{}.png".format(step)), dpi=400)
+
+def evaluate_joint(dataset, model, resdir, device, step, n_images=4):
+	# create DataLoader
+	loader = DataLoader(dataset, batch_size=n_images, shuffle=False, num_workers=4)
+
+	model.eval()
+	noisy, net_input, mask = next(iter(loader))
+	noisy = noisy.to(device)
+	noisy = noisy.float()
+	denoised = net(noisy).detach()
+	noisy, denoised = noisy.cpu(), denoised.cpu()
+	comp = np.concatenate([noisy, denoised], axis=-2)
 
 	fig = plt.figure(figsize=(3*n_images, 8))
 	fig.suptitle('top: IN, middle: OUT, bottom: GT', fontsize=16)
