@@ -278,9 +278,9 @@ class N2SProDemosaicDataset(SmithData):
 		Args:
 			fill_missing: 'zero', 'same' or 'interp'
 	"""
-	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, drop_background=True, renewing_patches=False, fill_missing='same', has_rgb=True,
+	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, drop_background=True, renewing_patches=True, fill_missing='same', has_rgb=True, sharp=False,
 					complete_background_noise=False, mask_grid_size=4, mask_shape_sharp_low=None, mask_shape_sharp_high=None, mask_shape_pro_low=None, mask_shape_pro_high=None):
-		super(N2SProDemosaicDataset, self).__init__(root, invert, crop, sharp=True, has_rgb=has_rgb, complete_background_noise=complete_background_noise)
+		super(N2SProDemosaicDataset, self).__init__(root, invert, crop, sharp=sharp, has_rgb=has_rgb, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
 		self.patches_per_image = patches_per_image
@@ -297,6 +297,9 @@ class N2SProDemosaicDataset(SmithData):
 		self.mask_shape_pro_high = mask_shape_pro_high
 		self.mask_shape_pro_low = mask_shape_pro_low
 
+		self.deterministic = False
+
+
 	def create_patches(self, idx, pro, patch_shape):
 		"""Creates a list of top left points of random patches for image idx and saves them to patches_positions"""
 		# cut a random patch from the image	
@@ -306,6 +309,9 @@ class N2SProDemosaicDataset(SmithData):
 
 		diff_row = pro_shape[1] - patch_shape[1]
 		diff_col = pro_shape[2] - patch_shape[2]
+
+		if self.deterministic:
+			random.seed(42)
 		
 		positions = []
 		fail_count = 0
@@ -352,12 +358,12 @@ class N2SProDemosaicDataset(SmithData):
 
 		# from eval import plot_sharp_masking
 		# plot_sharp_masking(patch, patch_low, patch_high, sharp_sparse, sharp)
-
+		
 		return sharp[:, :, 1:]
 
 
 	def __getitem__(self, idx):
-		if self.renewing_patches:
+		if self.renewing_patches and not self.deterministic:
 			self.get_calls += 1
 			if self.get_calls > self.__len__():
 				self.reset()
@@ -381,7 +387,8 @@ class N2SProDemosaicDataset(SmithData):
 		patch = torch.tensor(patch, dtype=torch.float)
 
 		sharp = torch.tensor(self.gen_sharp(patch), dtype=torch.float)
-		pro = torch.tensor(patch, dtype=torch.float)
+		pro = patch
+
 
 		pro = pro[:, :, 2:-1]
 		sharp = sharp[:, :, 1:]
@@ -392,7 +399,10 @@ class N2SProDemosaicDataset(SmithData):
 		masker = Masker(width = self.mask_grid_size, mode='interpolate')
 		net_input, mask = masker.mask_channels(sharp, masked_pixel, mask_shape_low=self.mask_shape_sharp_low, mask_shape_high=self.mask_shape_sharp_high, demosaicing=True)
 
-		return pro, net_input, mask
+		# from eval import plot_tensors
+		# plot_tensors([pro, net_input, mask])
+
+		return pro, net_input, mask, sharp
 
 	def get_full(self, idx):
 		"""Does not do patching."""

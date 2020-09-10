@@ -42,15 +42,8 @@ if __name__=="__main__":
 	channels = config['channels']
 
 	# datasets
-	#dataset = N2SDataset(args.data, sharp=True, mask_grid_size=config['train']['mask_grid_size'], channels=config['channels'], **config.get("dataset", {}))
-	dataset = N2SProDemosaicDataset(args.data, mask_grid_size=config['train']['mask_grid_size'], **config.get("dataset", {}))
-
-	simple_res_net = torch.nn.Sequential(
-		model.ConvBlock(1, 16, 3, padding_mode='reflect'),
-		model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32]),
-		model.ResBlock(1, 3, padding_mode='reflect', activation='relu', hidden_channels=[32, 32, 32]),
-		model.ConvBlock(1, 1, 3, padding_mode='reflect', activation='sigmoid'),
-	)
+	# dataset = N2SDataset(args.data, sharp=True, mask_grid_size=config['train']['mask_grid_size'], channels=config['channels'], **config.get("dataset", {}))
+	dataset = N2SProDemosaicDataset(args.data, sharp=True, mask_grid_size=config['train']['mask_grid_size'], **config.get("dataset", {}))
 
 	model_type = config['model']
 	if model_type == 'unet':
