@@ -1,0 +1,23 @@
+{
+	"name": "testrun",
+	"model": "unet",
+	"model_params": {
+		"activation": "leakyrelu",
+		"residual": false
+	},
+	"fit": {
+		"learn_rate": 0.01,
+		"batch_size": 8,
+		"epochs": 30,
+		"mask_grid_size": 6
+	},
+	"dataset": {
+		"sharp": true,
+		"target_size": [130, 128],
+		"loss_shape": "full",
+		"patches_per_image": 6,
+		"crop": true,
+		"drop_background": true,
+		"complete_background_noise": true
+	}
+}

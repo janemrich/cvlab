@@ -80,17 +80,19 @@ class Down(nn.Module):
 class UpSkip(nn.Module):
 	"""Upscaling then double conv"""
 
-	def __init__(self, in_channels, out_channels, bilinear=True, activation='relu'):
+	def __init__(self, in_channels, out_channels, conv_after_upsample, bilinear=True, activation='relu'):
 		super().__init__()
 
 		# if bilinear, use the normal convolutions to reduce the number of channels
 		if bilinear:
 			self.up = nn.Sequential(
-				nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+				nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
+				*[ConvBlock(in_channels, in_channels, 3, activation=activation) for _ in range(conv_after_upsample)]
 			)
 		else:
 			self.up = nn.Sequential(
-				nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2)
+				nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2),
+				*[ConvBlock(in_channels, in_channels, 3, activation=activation) for _ in range(conv_after_upsample)]
 			)
 		
 		self.conv = nn.Sequential(
@@ -120,7 +122,7 @@ class OutConv(nn.Module):
 
 
 class UNet(nn.Module):
-	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False, dilation=False, downsampling='maxpool', residual_droput=False):
+	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False, dilation=False, downsampling='maxpool', residual_droput=False, conv_after_upsample=0):
 		super(UNet, self).__init__()
 		self.n_channels = n_channels
 		self.bilinear = bilinear
@@ -132,7 +134,7 @@ class UNet(nn.Module):
 			ConvBlock(hidden[0], hidden[0], 3, activation=activation, padding_mode=padding_mode)
 		)
 		self.down_convs = nn.ModuleList([Down(i, o, downsampling=downsampling) for i, o in zip(hidden[:-1], hidden[1:])])
-		self.up_convs = nn.ModuleList([UpSkip(i, o, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))])
+		self.up_convs = nn.ModuleList([UpSkip(i, o, conv_after_upsample, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))])
 		self.outconv = nn.Conv2d(hidden[0], n_channels, kernel_size=1)
 		if self.residual_dropout:
 			self.res_drop = nn.Dropout(p=0.5)
