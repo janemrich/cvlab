@@ -7,13 +7,14 @@
 	},
 	"fit": {
 		"learn_rate": 0.01,
-		"batch_size": 1,
+		"batch_size": 8,
 		"epochs": 20,
-		"mask_grid_size": 6
+		"mask_grid_size": 4
 	},
 	"dataset": {
 		"sharp": true,
-		"target_size": [130, 128],
+		"target_size": [18, 16],
+		"loss_shape": "full",
 		"patches_per_image": 1,
 		"crop": true,
 		"drop_background": true,

@@ -1,4 +1,5 @@
 {
+	"name": "testrun",
 	"model": "unet",
 	"model_params": {
 		"activation": "leakyrelu",
@@ -11,7 +12,9 @@
 		"mask_grid_size": 6
 	},
 	"dataset": {
+		"sharp": true,
 		"target_size": [130, 128],
+		"loss_shape": "full",
 		"patches_per_image": 6,
 		"crop": true,
 		"drop_background": true,
