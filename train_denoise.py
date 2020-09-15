@@ -4,6 +4,9 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
+from torch.utils.tensorboard import SummaryWriter
+import os
+from datetime import datetime
 
 from noise2self.mask import Masker
 
@@ -11,8 +14,14 @@ import model
 import progress
 from eval import plot_denoise
 from eval import plot_denoising_masking
+from eval import evaluate_joint
 
 def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.0001, **kwargs):
+	logdir = os.path.join('runs', datetime.now().strftime("_%d%b-%H%M%S"))
+	writer = SummaryWriter(log_dir=logdir)
+
+	valdir = os.path.join(writer.log_dir, "val")
+	os.mkdir(valdir)
 
 	train_size = int(0.8 * len(dataset))
 	test_size = len(dataset) - train_size
@@ -71,6 +80,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 			loss.backward()
 			optimizer.step()
 
+			writer.add_scalar('Loss/train', loss.item(), global_step=e)
 			bar.inc_progress(batch_size)
 
 		train_loss /= n_losses
@@ -86,6 +96,8 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 			val_loss += loss_function(net_output*mask, noisy*mask).item() * mask_loss_factor
 			n_losses += 1
+
+			writer.add_scalar('Loss/val', val_loss / n_losses, global_step=e)
 
 		del noisy, net_input, mask, net_output
 

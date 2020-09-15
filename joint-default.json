@@ -14,6 +14,7 @@
 	"dataset": {
 		"sharp": true,
 		"target_size": [130, 128],
+		"subpixelmask": true,
 		"loss_shape": "full",
 		"patches_per_image": 6,
 		"crop": true,

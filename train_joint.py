@@ -20,8 +20,8 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	test_size = len(dataset) - train_size
 	ds_train, ds_val = torch.utils.data.random_split(dataset, [train_size, test_size], generator=torch.Generator().manual_seed(42))
 
-	loader_train = torch.utils.data.DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
-	loader_test = torch.utils.data.DataLoader(ds_val, batch_size=batch_size, shuffle=False, num_workers=1)
+	loader_train = torch.utils.data.DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=3, pin_memory=True)
+	loader_test = torch.utils.data.DataLoader(ds_val, batch_size=batch_size, shuffle=False, num_workers=3)
 	
 	net.to(device)
 	criterion.to(device)

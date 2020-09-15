@@ -90,7 +90,7 @@ def evaluate_joint(dataset, model, resdir, device, step, n_images=4):
 		ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
 		
 	plt.savefig(os.path.join(resdir, "eval{}.png".format(step)), dpi=400)
-	plt.close()
+	# plt.close()
 	del loader, sharp, noisy, mask, denoised, comp, _
 
 def plot_denoise(net, data_loader, device, e, channels):
@@ -152,17 +152,17 @@ def plot_sharp_masking(patch, patch_low, patch_high, sharp_sparse, sharp):
 		plt.imshow(im, interpolation=None, vmin=0.0, vmax=1.0, cmap='inferno')
 	plt.show()
 
-def plot_tensors(tensors):
+def plot_tensors(tensors, v=False):
 	fig = plt.figure()
 
 	for i, im in enumerate(tensors):
 		ax = fig.add_subplot(tensors.__len__(), tensors[0].shape[-3], 2*i+1)
-		ax.get_xaxis().set_visible(False)
-		ax.get_yaxis().set_visible(False)
+		ax.get_xaxis().set_visible(v)
+		ax.get_yaxis().set_visible(v)
 		plt.imshow(im[0], interpolation=None, vmin=0.0, vmax=1.0, cmap='inferno')
 
 		ax = fig.add_subplot(tensors.__len__(), tensors[0].shape[-3], 2*i+2)
-		ax.get_xaxis().set_visible(False)
-		ax.get_yaxis().set_visible(False)
+		ax.get_xaxis().set_visible(v)
+		ax.get_yaxis().set_visible(v)
 		plt.imshow(im[1], interpolation=None, vmin=0.0, vmax=1.0, cmap='inferno')
 	plt.show()
