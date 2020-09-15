@@ -283,7 +283,7 @@ class N2SProDemosaicDataset(SmithData):
 					complete_background_noise=False, mask_grid_size=4, mask_shape_sharp_low=None, mask_shape_sharp_high=None, mask_shape_pro_low=None, mask_shape_pro_high=None, loss_shape='full'):
 		super(N2SProDemosaicDataset, self).__init__(root, invert, crop, sharp=sharp, has_rgb=has_rgb, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
-		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
+		self.patch_cols = target_size[0] + 3 # plus one because we extract the high and low patch shifted and need one extra column #### and plus two to generate sharp
 		self.patches_per_image = patches_per_image
 		self.patches_positions = [[]] * super(N2SProDemosaicDataset, self).__len__()
 		self.fill_missing=fill_missing
