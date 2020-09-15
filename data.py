@@ -279,7 +279,7 @@ class N2SProDemosaicDataset(SmithData):
 			fill_missing: 'zero', 'same' or 'interp'
 	"""
 	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, drop_background=True, renewing_patches=True, fill_missing='same', has_rgb=True, sharp=False,
-					complete_background_noise=False, mask_grid_size=4, mask_shape_sharp_low=None, mask_shape_sharp_high=None, mask_shape_pro_low=None, mask_shape_pro_high=None, loss_shape='full'):
+					complete_background_noise=False, mask_grid_size=4, mask_shape_sharp_low=None, mask_shape_sharp_high=None, mask_shape_pro_low=None, mask_shape_pro_high=None, loss_shape='full', subpixelmask=False):
 		super(N2SProDemosaicDataset, self).__init__(root, invert, crop, sharp=sharp, has_rgb=has_rgb, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
@@ -297,6 +297,7 @@ class N2SProDemosaicDataset(SmithData):
 		self.mask_shape_pro_high = mask_shape_pro_high
 		self.mask_shape_pro_low = mask_shape_pro_low
 		self.loss_shape = loss_shape
+		self.subpixelmask = subpixelmask
 
 		self.deterministic = False
 
@@ -336,6 +337,15 @@ class N2SProDemosaicDataset(SmithData):
 	def gen_sharp(self, patch):
 		if patch.shape[-1] % 2 == 0:
 			patch = patch[:, :, :-1]
+
+		if self.subpixelmask:
+			rng = np.random.default_rng()
+			masked_pixel = rng.integers(self.mask_grid_size**2)
+			masker = Masker(width=self.mask_grid_size, mode='interpolate')
+			net_input, mask = masker.mask_channels(patch, masked_pixel)
+			sharp = gen_normal_sharp(net_input, self.fill_missing)
+			return sharp[:,:,1:], mask[:,:,2:-1]
+
 		patch_high = patch[1, :, :-1]
 		patch_low = patch[0, :, 1:]
 
@@ -432,17 +442,14 @@ class N2SProDemosaicDataset(SmithData):
 		patch = torch.tensor(patch, dtype=torch.float)
 
 		# sharp = torch.tensor(self.gen_sharp(patch), dtype=torch.float)
-		sharp, mask = self.gen_sharp(patch)
+		net_input, mask = self.gen_sharp(patch)
+		net_input = torch.tensor(net_input, dtype=torch.float)
+		sharp = gen_normal_sharp(patch, self.fill_missing)[:, :, 1:]
+		sharp = torch.tensor(sharp, dtype=torch.float)
 		pro = patch[:, :, 2:-1]
 
-		rng = np.random.default_rng()
-		masked_pixel = rng.integers(self.mask_grid_size**2)
-
-		masker = Masker(width = self.mask_grid_size, mode='interpolate')
-		net_input, mask = masker.mask_channels(sharp, masked_pixel, mask_shape_low=self.mask_shape_sharp_low, mask_shape_high=self.mask_shape_sharp_high, demosaicing=True)
-
 		# from eval import plot_tensors
-		# plot_tensors([pro, sharp, mask])
+		# plot_tensors([pro, net_input, mask, sharp, np.abs(net_input-sharp)*10], v=True)
 
 		return pro, net_input, mask, sharp
 
@@ -753,3 +760,29 @@ class ProDemosaicRGBDataset(SmithData):
 		return super(ProDemosaicRGBDataset, self).__len__() * self.patches_per_image
 
 
+def gen_normal_sharp(patch, fill_missing):
+	if patch.shape[-1] % 2 == 0:
+		patch = patch[:, :, :-1]
+	# patch_high = patch[1, :, :-1]
+	patch_high = patch[1, :, :-1]
+	patch_low = patch[0, :, 1:]
+
+	sharp_sparse = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)))
+	sharp = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)*2))
+
+	sharp_sparse[1, :, :] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
+	sharp_sparse[0, :, :] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
+	
+	sharp[1, :, 0::2] = sharp_sparse[1, :, :]
+	sharp[0, :, 1::2] = sharp_sparse[0, :, :]
+
+	if fill_missing == 'same':
+		sharp[:, :, 1:] += sharp[:, :, :-1]
+
+	elif fill_missing == 'interp':
+		raise NotImplementedError
+	
+	else:
+		raise ValueError("Unknown fill value {}".format(self.fill_missing))
+	
+	return sharp[:, :, 1:]
