@@ -84,7 +84,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 			bar.inc_progress(batch_size)
 
 		train_loss /= n_losses
-		del noisy, net_input, mask, net_output, loss
+		del noisy, net_input, mask, net_output, loss, #fade_factor
 
 		net.eval()
 		val_loss = 0.0

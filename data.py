@@ -265,7 +265,8 @@ class N2SDataset(SmithData):
 			if self.channels == 1:
 				return images, masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
 			if self.channels == 2:
-				return images, masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+				net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+				return images, net_input, mask
 
 		return images[:self.channels,:,:]
 
