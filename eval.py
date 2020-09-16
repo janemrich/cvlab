@@ -89,7 +89,7 @@ def evaluate_joint(dataset, model, resdir, device, step, n_images=4):
 		ax1.set_title("image {}".format(j))
 		ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
 		
-	plt.savefig(os.path.join(resdir, "eval{}.png".format(step)), dpi=400)
+	plt.savefig(os.path.join(resdir, "eval{}.png".format(step)), dpi=300)
 	# plt.close()
 	del loader, sharp, noisy, mask, denoised, comp, _
 

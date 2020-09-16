@@ -71,7 +71,7 @@ class Masker():
 
     assumes X has 3 dimensions with channels
     """
-    def mask_channels(self, x, i, mask_shape_low=None, mask_shape_high=None, demosaicing=False):
+    def mask_channels(self, x, i, mask_shape_low=None, mask_shape_high=None, demosaicing=False, halfpixel=False):
         x = x.unsqueeze(0)
         net_input = torch.empty_like(x)
 
@@ -85,8 +85,19 @@ class Masker():
             net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
             net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
         else:
-            net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
-            net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
+            if halfpixel:
+                rng = np.random.default_rng()
+                channel = rng.integers(2)
+                if channel == 0:
+                    net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
+                    net_input[:, 1:, :, :], mask_high = x[:, 1:, :, :], torch.zeros_like(mask_low)
+                elif channel == 1:
+                    net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_low)
+                    net_input[:, :1, :, :], mask_low = x[:, :1, :, :], torch.zeros_like(mask_high)
+            else:
+                net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i, mask_shape=mask_shape_low)
+                net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i, mask_shape=mask_shape_high)
+
         mask = torch.stack([mask_low, mask_high], axis=-3)
 
         # from eval import plot_tensors

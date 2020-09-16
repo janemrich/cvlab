@@ -13,10 +13,11 @@
 	},
 	"dataset": {
 		"sharp": true,
-		"target_size": [34, 32],
+		"target_size": [32, 32],
 		"subpixelmask": true,
+		"halfpixel": true,
 		"loss_shape": "full",
-		"patches_per_image": 1,
+		"patches_per_image": 6,
 		"crop": true,
 		"drop_background": true,
 		"complete_background_noise": true

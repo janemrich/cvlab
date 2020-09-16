@@ -39,7 +39,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	valdir = os.path.join(writer.log_dir, "val")
 	os.mkdir(valdir)
 	
-	mask_loss_factor = mask_grid_size**2 / 2
+	mask_loss_factor = mask_grid_size**2 * 2
 
 	eval_fn(ds_val, net, valdir, device, 0)
 
