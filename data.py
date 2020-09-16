@@ -450,8 +450,8 @@ class N2SProDemosaicDataset(SmithData):
 		sharp = torch.tensor(sharp, dtype=torch.float)
 		pro = patch[:, :, 2:-1]
 
-		from eval import plot_tensors
-		plot_tensors([pro, net_input, mask, sharp, np.abs(net_input-sharp)*10], v=True)
+		#from eval import plot_tensors
+		#plot_tensors([pro, net_input, mask, sharp, np.abs(net_input-sharp)*10], v=True)
 
 		return pro, net_input, mask, sharp
 
