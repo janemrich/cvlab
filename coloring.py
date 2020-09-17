@@ -47,7 +47,7 @@ if __name__=="__main__":
 			return self.mse(y[:, 0, :, :], _y[:, 0, :, :])
 
 	net = torch.nn.Sequential(
-		torch.nn.Conv2d(2, 100, kernel_size=1, bias=False),
+		torch.nn.Conv2d(2, 50, kernel_size=1, bias=False),
 		torch.nn.BatchNorm2d(100),
 		torch.nn.LeakyReLU(),
 		torch.nn.Conv2d(100, 100, kernel_size=1, bias=False),
@@ -61,7 +61,9 @@ if __name__=="__main__":
 		# torch.nn.LeakyReLU(),
 		# torch.nn.Conv2d(100, 100, kernel_size=1),
 		torch.nn.LeakyReLU(),
-		torch.nn.MaxPool2d(1, stride=1),
+		torch.nn.Conv2d(100, 100, kernel_size=1, bias=False),
+		torch.nn.BatchNorm2d(100),
+		torch.nn.LeakyReLU(),
 		torch.nn.Conv2d(100, 100, kernel_size=1, bias=False),
 		torch.nn.BatchNorm2d(100),
 		torch.nn.LeakyReLU(),
