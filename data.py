@@ -182,24 +182,18 @@ class SmithData():
 class N2SDataset(SmithData):
 
 	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
-				complete_background_noise=False, masking=False, channels=2, mask_grid_size=4, mask_shape_low=None, mask_shape_high=None, loss_only_channel=-1):
+				complete_background_noise=False, channels=2, mask_grid_size=4, mask_shape_low=None, mask_shape_high=None):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
 		self.patches_per_image = patches_per_image
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 		self.drop_background = drop_background
-		self.masking = masking
 		self.channels = channels
 		self.mask_grid_size = mask_grid_size
 		self.mask_shape_high = mask_shape_high
 		self.mask_shape_low = mask_shape_low
 		self.get_calls = 0
-		self.loss_only_channel = loss_only_channel
-
-	# make it deterministic #TODO better name
-	def test():
-		self.test = True
 
 
 	def create_patches(self, idx, image, images_shape, patch_shape):
@@ -257,18 +251,19 @@ class N2SDataset(SmithData):
 		# images = patch[:, :, :-1]
 		images = torch.tensor(patch[:, :, :-1], dtype=torch.float)
 
-		if self.masking:
-			rng = np.random.default_rng()
-			masked_pixel = rng.integers(self.mask_grid_size**2)
+		rng = np.random.default_rng()
+		masked_pixel = rng.integers(self.mask_grid_size**2)
 
-			masker = Masker(width = self.mask_grid_size, mode='interpolate')
-			if self.channels == 1:
-				return images, masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
-			if self.channels == 2:
-				net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
-				return images, net_input, mask
+		masker = Masker(width = self.mask_grid_size, mode='interpolate')
+		if self.channels == 1:
+			return images, masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+		if self.channels == 2:
+			net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+			# from eval import plot_tensors
+			# plot_tensors([images, net_input, mask])
+			return images, net_input, mask
 
-		return images[:self.channels,:,:]
+		return images[:self.channels,:,:], 
 
 	def __len__(self):
 		return super(N2SDataset, self).__len__() * self.patches_per_image

@@ -108,7 +108,10 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		with open('loss.txt', 'a') as f:
 			print(e, ';{:.10f}'.format(train_loss), ';{:.10f}'.format(val_loss), file=f)
 
-		plot_denoise(net, test_data_loader, device, e, channels)
+		plot_denoise(net, test_data_loader, device, e, channels, valdir)
+
+	torch.save(net, os.path.join(writer.log_dir, "model.sav"))
+	return logdir
 
 
 def fading_loss(x, threshold_from_end=1000, maxvalue=65535.0):
