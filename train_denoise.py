@@ -32,9 +32,9 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 	test_dataset, val_dataset = torch.utils.data.random_split(test_dataset, [test_size, val_size], generator=torch.Generator().manual_seed(42))
 
-	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1)
+	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=3)
 	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=1)
-	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=1)
+	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=3)
 
 	optimizer_args_default = {'lr': learn_rate * (batch_size/32)}
 	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
