@@ -10,6 +10,7 @@ import json
 from train import fit
 import utils
 import shutil
+from noise2self.models.unet import UNet as N2SUnet
 
 """
 Config format:
@@ -51,6 +52,8 @@ if __name__=="__main__":
 		net = model.ResNet(2, 2, **model_params)
 	elif model_name == "unet":
 		net = model.UNet(2, **model_params)
+	elif model_name == "n2s-unet":
+		net = N2SUnet(2, 2, **model_params)
 
 	loss_fun = config.get("loss", "mse")
 	if loss_fun == 'mse':
@@ -71,3 +74,6 @@ if __name__=="__main__":
 	resdir = fit(net, loss, train_dataset, device=args.device, name=args.name, **config.get("fit", {}))
 
 	shutil.copyfile(args.config, os.path.join(resdir, os.path.basename(args.config)))
+	
+	# torch.save(net, os.path.join(resdir, "model.sav"))
+	torch.save(net.state_dict(), os.path.join(resdir, "statedict.pt"))
