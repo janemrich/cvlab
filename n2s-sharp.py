@@ -44,7 +44,7 @@ if __name__=="__main__":
 	channels = config['channels']
 
 	# datasets
-	dataset = N2SDataset(args.data, sharp=True, mask_grid_size=config['train']['mask_grid_size'], channels=config['channels'], **config.get("dataset", {}))
+	dataset = N2SDataset(args.data, mask_grid_size=config['train']['mask_grid_size'], channels=config['channels'], **config.get("dataset", {}))
 
 	model_type = config['model']
 	if model_type == 'unet':
