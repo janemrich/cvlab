@@ -16,8 +16,8 @@ from eval import plot_denoise
 from eval import plot_denoising_masking
 from eval import evaluate_joint
 
-def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.0001, **kwargs):
-	logdir = os.path.join('runs', datetime.now().strftime("_%d%b-%H%M%S"))
+def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', name=None, mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.0001, **kwargs):
+	logdir = os.path.join('runs', name + datetime.now().strftime("_%d%b-%H%M%S"))
 	writer = SummaryWriter(log_dir=logdir)
 
 	valdir = os.path.join(writer.log_dir, "val")

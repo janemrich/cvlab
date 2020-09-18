@@ -38,6 +38,9 @@ if __name__=="__main__":
 	with open(args.config, 'r') as f:
 		config = json.load(f)
 
+	if args.name is None:
+		args.name = config.get("name", None)
+
 	channels = config['channels']
 
 	# datasets
@@ -73,6 +76,7 @@ if __name__=="__main__":
 		config['dataset']['target_size'],
 		batch_size=config['train']['batch_size'],
 		device=args.device,
+		name=name,
 		mask_grid_size=config['train']['mask_grid_size'],
 		fade_threshold=config['train']['fade_threshold'],
 		channels=channels,

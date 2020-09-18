@@ -1,4 +1,5 @@
 {
+	"name": "test",
 	"model": "n2s-unet",
 	"model_params": {
 		"activation": "leakyrelu",
