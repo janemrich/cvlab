@@ -76,7 +76,7 @@ if __name__=="__main__":
 		config['dataset']['target_size'],
 		batch_size=config['train']['batch_size'],
 		device=args.device,
-		name=name,
+		name=args.name,
 		mask_grid_size=config['train']['mask_grid_size'],
 		fade_threshold=config['train']['fade_threshold'],
 		channels=channels,
