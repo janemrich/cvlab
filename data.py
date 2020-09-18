@@ -210,9 +210,6 @@ class N2SDataset(SmithData):
 		fail_count = 0
 		max_fails = 10
 
-		# get same patches in test mode
-		if self.test:
-			random.seed(42)
 		while len(positions) < self.patches_per_image:	
 			if diff_row > 0:
 				shift_row = random.randrange(diff_row)
