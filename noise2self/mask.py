@@ -43,12 +43,6 @@ class Masker():
             mask = torch.zeros_like(mask)
             mask[:,1:] += orig_mask[:, :-1]
 
-            # import matplotlib.pyplot as plt
-            # plt.imshow(orig_mask)
-            # plt.show()
-            # plt.imshow(mask)
-            # plt.show()
-
 
         mask_inv = torch.ones(mask.shape) - mask
 

@@ -184,24 +184,20 @@ class SmithData():
 class N2SDataset(SmithData):
 
 	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
-				complete_background_noise=False, masking=False, channels=2, mask_grid_size=4, mask_shape_low=None, mask_shape_high=None, loss_only_channel=-1):
+				complete_background_noise=False, channels=2, mask_grid_size=4, mask_shape_low=None, mask_shape_high=None, halfpixel=False, regular_reset=True):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
 		self.patches_per_image = patches_per_image
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 		self.drop_background = drop_background
-		self.masking = masking
 		self.channels = channels
 		self.mask_grid_size = mask_grid_size
 		self.mask_shape_high = mask_shape_high
 		self.mask_shape_low = mask_shape_low
 		self.get_calls = 0
-		self.loss_only_channel = loss_only_channel
-
-	# make it deterministic #TODO better name
-	def test():
-		self.test = True
+		self.halfpixel = halfpixel
+		self.regular_reset = regular_reset
 
 
 	def create_patches(self, idx, image, images_shape, patch_shape):
@@ -217,9 +213,6 @@ class N2SDataset(SmithData):
 		fail_count = 0
 		max_fails = 10
 
-		# get same patches in test mode
-		if self.test:
-			random.seed(42)
 		while len(positions) < self.patches_per_image:	
 			if diff_row > 0:
 				shift_row = random.randrange(diff_row)
@@ -236,9 +229,10 @@ class N2SDataset(SmithData):
 		self.patches_positions = [[]] * super(N2SDataset, self).__len__()
 
 	def __getitem__(self, idx):
-		self.get_calls += 1
-		if self.get_calls > self.__len__():
-			self.reset()
+		if self.regular_reset:
+			self.get_calls += 1
+			if self.get_calls > self.__len__():
+				self.reset()
 
 		idx_img = idx // self.patches_per_image
 		idx_patch = idx % self.patches_per_image
@@ -259,18 +253,19 @@ class N2SDataset(SmithData):
 		# images = patch[:, :, :-1]
 		images = torch.tensor(patch[:, :, :-1], dtype=torch.float)
 
-		if self.masking:
-			rng = np.random.default_rng()
-			masked_pixel = rng.integers(self.mask_grid_size**2)
+		rng = np.random.default_rng()
+		masked_pixel = rng.integers(self.mask_grid_size**2)
 
-			masker = Masker(width = self.mask_grid_size, mode='interpolate')
-			if self.channels == 1:
-				return images, masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
-			if self.channels == 2:
-				net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
-				return images, net_input, mask
+		masker = Masker(width = self.mask_grid_size, mode='interpolate')
+		if self.channels == 1:
+			return images, masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+		if self.channels == 2:
+			net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high, halfpixel=self.halfpixel)
+			# from eval import plot_tensors
+			# plot_tensors([images, net_input, mask])
+			return images, net_input, mask
 
-		return images[:self.channels,:,:]
+		return images[:self.channels,:,:], 
 
 	def __len__(self):
 		return super(N2SDataset, self).__len__() * self.patches_per_image

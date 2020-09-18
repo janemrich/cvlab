@@ -1,22 +1,22 @@
 {
+	"name": "test",
 	"model": "n2s-unet",
 	"model_params": {
-		"activation": "leakyrelu"
+		"activation": "leakyrelu",
+		"residual": false
 	},
 	"channels": 2,
 	"train": {
-		"learn_rate": 0.0005,
-		"batch_size": 8,
-		"epochs": 20,
-		"mask_grid_size": 6,
+		"learn_rate": 0.01,
+		"batch_size": 4,
+		"epochs": 1,
+		"mask_grid_size": 5,
 		"fade_threshold": 0
 	},
 	"dataset": {
 		"target_size": [128, 128],
-		"masking": true,
-		"mask_shape_low": "left",
-		"mask_shape_high": "right",
-		"loss_only_channel": 0,
+		"halfpixel": false,
+		"sharp": true,
 		"drop_background": "True",
 		"complete_background_noise": "True"
 	}

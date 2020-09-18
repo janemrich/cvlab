@@ -93,7 +93,7 @@ def evaluate_joint(dataset, model, resdir, device, step, n_images=4):
 	# plt.close()
 	del loader, sharp, noisy, mask, denoised, comp, _
 
-def plot_denoise(net, data_loader, device, e, channels):
+def plot_denoise(net, data_loader, device, e, channels, resdir):
 	noisy, net_input, mask = next(iter(data_loader))
 	noisy = noisy.to(device)
 	noisy = noisy.float()
@@ -123,7 +123,8 @@ def plot_denoise(net, data_loader, device, e, channels):
 		ax1.set_title("image {}".format(j))
 		ax1.imshow(comp[j][0], interpolation=None, vmin=0.0, vmax=1.0, cmap='gray')
 
-	plt.savefig('n2s_epoch' + str(e) + '.png', dpi=300)
+	plt.savefig(os.path.join(resdir, "eval{}.png".format(e)), dpi=300)
+	# plt.close()
 	del noisy, denoised, comp
 
 def plot_denoising_masking(noisy, net_input, mask, net_output):

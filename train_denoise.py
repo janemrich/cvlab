@@ -16,8 +16,8 @@ from eval import plot_denoise
 from eval import plot_denoising_masking
 from eval import evaluate_joint
 
-def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.0001, **kwargs):
-	logdir = os.path.join('runs', datetime.now().strftime("_%d%b-%H%M%S"))
+def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', name=None, mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.0001, **kwargs):
+	logdir = os.path.join('runs', name + datetime.now().strftime("_%d%b-%H%M%S"))
 	writer = SummaryWriter(log_dir=logdir)
 
 	valdir = os.path.join(writer.log_dir, "val")
@@ -32,9 +32,9 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 	test_dataset, val_dataset = torch.utils.data.random_split(test_dataset, [test_size, val_size], generator=torch.Generator().manual_seed(42))
 
-	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1)
+	dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=3)
 	test_data_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=1)
-	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=1)
+	val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=3)
 
 	optimizer_args_default = {'lr': learn_rate * (batch_size/32)}
 	optimizer_args = {k[len("optimizer_"):]: v for k, v in kwargs.items() if k.startswith("optimizer_")}
@@ -108,7 +108,10 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		with open('loss.txt', 'a') as f:
 			print(e, ';{:.10f}'.format(train_loss), ';{:.10f}'.format(val_loss), file=f)
 
-		plot_denoise(net, test_data_loader, device, e, channels)
+		plot_denoise(net, test_data_loader, device, e, channels, valdir)
+
+	torch.save(net, os.path.join(writer.log_dir, "model.sav"))
+	return logdir
 
 
 def fading_loss(x, threshold_from_end=1000, maxvalue=65535.0):
