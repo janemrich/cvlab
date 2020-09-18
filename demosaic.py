@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import model
-from data import N2NDataset, DemosaicingDataset, ProDemosaicDataset
+from data import ProDemosaicDataset
 from argparse import ArgumentParser
 import json
 from train import fit
