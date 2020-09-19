@@ -260,7 +260,8 @@ class N2SDataset(SmithData):
 		if self.channels == 2:
 			net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high, halfpixel=self.halfpixel)
 			# from eval import plot_tensors
-			# plot_tensors([images, net_input, mask])
+			# plot_tensors([images, net_input, mask, ])
+			# plot_tensors([images, net_input, mask, np.abs(net_input-images)*100], v=True)
 			return images, net_input, mask
 
 		return images[:self.channels,:,:], 
@@ -275,7 +276,7 @@ class N2SProDemosaicDataset(SmithData):
 			fill_missing: 'zero', 'same' or 'interp'
 	"""
 	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, drop_background=True, renewing_patches=True, fill_missing='same', has_rgb=True, sharp=False,
-					complete_background_noise=False, mask_grid_size=4, mask_shape_sharp_low=None, mask_shape_sharp_high=None, mask_shape_pro_low=None, mask_shape_pro_high=None, loss_shape='full', subpixelmask=False, halfpixel=False):
+					complete_background_noise=False, mask_grid_size=4, loss_shape='center', subpixelmask=False, halfpixel=False):
 		super(N2SProDemosaicDataset, self).__init__(root, invert, crop, sharp=sharp, has_rgb=has_rgb, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 3 # plus one because we extract the high and low patch shifted and need one extra column #### and plus two to generate sharp
@@ -288,10 +289,6 @@ class N2SProDemosaicDataset(SmithData):
 		self.get_calls = 0
 		# denoising
 		self.mask_grid_size = mask_grid_size
-		self.mask_shape_sharp_high = mask_shape_sharp_high
-		self.mask_shape_sharp_low = mask_shape_sharp_low
-		self.mask_shape_pro_high = mask_shape_pro_high
-		self.mask_shape_pro_low = mask_shape_pro_low
 		self.loss_shape = loss_shape
 		self.subpixelmask = subpixelmask
 		self.halfpixel = halfpixel
@@ -411,7 +408,7 @@ class N2SProDemosaicDataset(SmithData):
 		
 		del sharp_sparse, mask_sparse, filled_sharp, full_mask, fullest_mask
 		# plot_tensors([sharp, mask])
-		return sharp[:, :, 2:], mask
+		return sharp[:, :, 2:], mask[:, :, 2:]
 
 
 	def __getitem__(self, idx):
@@ -445,8 +442,8 @@ class N2SProDemosaicDataset(SmithData):
 		sharp = torch.tensor(sharp, dtype=torch.float)
 		pro = patch[:, :, 2:-1]
 
-		#from eval import plot_tensors
-		#plot_tensors([pro, net_input, mask, sharp, np.abs(net_input-sharp)*10], v=True)
+		# from eval import plot_tensors
+		# plot_tensors([pro, net_input, mask, sharp, np.abs(net_input-sharp)*100], v=True)
 
 		return pro, net_input, mask, sharp
 
