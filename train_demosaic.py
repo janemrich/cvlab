@@ -80,6 +80,5 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 
 			del X, Y, Y_, loss, losses
 
-	torch.save(net, os.path.join(writer.log_dir, "model.sav"))
 
 	return logdir

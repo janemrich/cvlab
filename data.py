@@ -128,8 +128,10 @@ class SmithData():
 		else:
 			high = np.array(Image.open(high_path)) # use high image to calculate masking box
 			low = np.array(Image.open(low_path)) # use high image to calculate masking box
-		
-		bbox = self.masks[idx] if self.crop else [0, min(low.shape[0], high.shape[0]), 0, min(low.shape[1], high.shape[1])]
+		if self.crop:
+			bbox = self.masks[idx]
+		else:
+			bbox = [0, min(low.shape[0], high.shape[0]), 0, min(low.shape[1], high.shape[1])]
 
 		arr = np.stack((high, low), axis=0)
 
@@ -465,7 +467,7 @@ class ProDemosaicDataset(SmithData):
 		Args:
 			fill_missing: 'zero', 'same' or 'interp'
 	"""
-	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, fill_missing='same', has_rgb=True):
+	def __init__(self, root, target_size=[128, 128], invert=True, crop=True, patches_per_image=8, fill_missing='same', has_rgb=True):
 		super(ProDemosaicDataset, self).__init__(root, invert, crop, has_rgb=has_rgb)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
@@ -563,7 +565,7 @@ class ProDemosaicDataset(SmithData):
 		pro = torch.tensor(pro[:, :, :sharp.shape[-1]], dtype=torch.float)
 		sharp = torch.tensor(sharp, dtype=torch.float)
 
-		return sharp, pro, super(ProDemosaicDataset, self).get_rgb(idx)
+		return sharp, pro #super(ProDemosaicDataset, self).get_rgb(idx)
 
 	def __len__(self):
 		return super(ProDemosaicDataset, self).__len__() * self.patches_per_image
