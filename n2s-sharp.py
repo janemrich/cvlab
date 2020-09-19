@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append('..')
 
@@ -39,7 +40,8 @@ if __name__=="__main__":
 		config = json.load(f)
 
 	if args.name is None:
-		args.name = config.get("name", None)
+		train = config.get("train")
+		args.name = config.get("name") + config.get("model", None) + "_lr" + str(train.get("learn_rate")) + "_b" + str(train.get("batch_size")) + "_g" + str(train.get("mask_grid_size")) + "_hp" + str(config.get("dataset").get("halfpixel"))
 
 	channels = config['channels']
 
@@ -69,7 +71,7 @@ if __name__=="__main__":
 
 	loss = MSELoss()
 
-	fit(net,
+	resdir = fit(net,
 		loss,
 		dataset,
 		config['train']['epochs'],
@@ -82,3 +84,5 @@ if __name__=="__main__":
 		channels=channels,
 		learn_rate=config['train']['learn_rate']
 		)
+
+	torch.save(net.state_dict(), os.path.join(resdir, "statedict.pt"))
