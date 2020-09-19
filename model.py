@@ -58,7 +58,7 @@ class ConvBlock(nn.Module):
 class Down(nn.Module):
 	"""Downscaling with maxpool then double conv"""
 
-	def __init__(self, in_channels, out_channels, activation='relu', downsampling='conv'):
+	def __init__(self, in_channels, out_channels, convs, activation='relu', downsampling='conv'):
 		super().__init__()
 		if downsampling == 'conv':
 			self.downsampling = nn.Conv2D(in_channels, in_channels, kernel_size=2, stride=2, groups=32)
@@ -70,7 +70,7 @@ class Down(nn.Module):
 		self.down = nn.Sequential(
 			self.downsampling,
 			ConvBlock(in_channels, out_channels, 3, activation=activation),
-			ConvBlock(out_channels, out_channels, 3, activation=activation)
+			*[ConvBlock(out_channels, out_channels, 3, activation=activation) for _ in range(convs-1)]
 		)
 
 	def forward(self, x):
@@ -80,7 +80,7 @@ class Down(nn.Module):
 class UpSkip(nn.Module):
 	"""Upscaling then double conv"""
 
-	def __init__(self, in_channels, out_channels, conv_after_upsample, bilinear=True, activation='relu'):
+	def __init__(self, in_channels, out_channels, conv_after_upsample, convs, bilinear=True, activation='relu'):
 		super().__init__()
 
 		# if bilinear, use the normal convolutions to reduce the number of channels
@@ -97,7 +97,7 @@ class UpSkip(nn.Module):
 		
 		self.conv = nn.Sequential(
 			ConvBlock(in_channels+in_channels // 2, out_channels, 3, activation=activation),
-			ConvBlock(out_channels, out_channels, 3, activation=activation)
+			*[ConvBlock(out_channels, out_channels, 3, activation=activation) for _ in range(convs-1)]
 		)
 
 	def forward(self, x, skip):
@@ -122,7 +122,7 @@ class OutConv(nn.Module):
 
 
 class UNet(nn.Module):
-	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False, dilation=False, downsampling='maxpool', residual_droput=False, conv_after_upsample=0):
+	def __init__(self, n_channels, bilinear=True, activation='relu', hidden=[64, 128, 256, 512], padding_mode='reflect', residual=False, dilation=False, downsampling='maxpool', residual_droput=False, conv_after_upsample=0, convs=2):
 		super(UNet, self).__init__()
 		self.n_channels = n_channels
 		self.bilinear = bilinear
@@ -133,8 +133,8 @@ class UNet(nn.Module):
 			ConvBlock(n_channels, hidden[0], 3, activation=activation, padding_mode=padding_mode, dilation=dilation),
 			ConvBlock(hidden[0], hidden[0], 3, activation=activation, padding_mode=padding_mode)
 		)
-		self.down_convs = nn.ModuleList([Down(i, o, downsampling=downsampling) for i, o in zip(hidden[:-1], hidden[1:])])
-		self.up_convs = nn.ModuleList([UpSkip(i, o, conv_after_upsample, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))])
+		self.down_convs = nn.ModuleList([Down(i, o, convs, downsampling=downsampling) for i, o in zip(hidden[:-1], hidden[1:])])
+		self.up_convs = nn.ModuleList([UpSkip(i, o, conv_after_upsample, convs, bilinear) for i, o in zip(reversed(hidden[1:]), reversed(hidden[:-1]))])
 		self.outconv = nn.Conv2d(hidden[0], n_channels, kernel_size=1)
 		if self.residual_dropout:
 			self.res_drop = nn.Dropout(p=0.5)
