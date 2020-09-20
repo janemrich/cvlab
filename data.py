@@ -184,7 +184,7 @@ class SmithData():
 class N2SDataset(SmithData):
 
 	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
-				complete_background_noise=False, channels=2, mask_grid_size=4, mask_shape_low=None, mask_shape_high=None, halfpixel=False, regular_reset=True):
+				complete_background_noise=False, channels=2, mask_grid_size=4, n_masked_pixel=2, regular_reset=True):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
@@ -193,10 +193,9 @@ class N2SDataset(SmithData):
 		self.drop_background = drop_background
 		self.channels = channels
 		self.mask_grid_size = mask_grid_size
-		self.mask_shape_high = mask_shape_high
-		self.mask_shape_low = mask_shape_low
+		self.n_masked_pixel = n_masked_pixel
+
 		self.get_calls = 0
-		self.halfpixel = halfpixel
 		self.regular_reset = regular_reset
 
 
@@ -250,7 +249,6 @@ class N2SDataset(SmithData):
 			shift_row:shift_row+patch.shape[1]-min(images.shape[1] - patch.shape[1], 0),
 			shift_col:shift_col+patch.shape[2]-min(images.shape[2] - patch.shape[2], 0)]
 
-		# images = patch[:, :, :-1]
 		images = torch.tensor(patch[:, :, :-1], dtype=torch.float)
 
 		rng = np.random.default_rng()
@@ -260,12 +258,15 @@ class N2SDataset(SmithData):
 		if self.channels == 1:
 			images = images[:1, :, :]
 			net_input, mask = masker.mask(images.unsqueeze(0), masked_pixel)
+
 			return images, net_input.squeeze(0), mask
+
 		if self.channels == 2:
-			net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high, halfpixel=self.halfpixel)
-			# from eval import plot_tensors
-			# plot_tensors([images, net_input, mask, ])
-			# plot_tensors([images, net_input, mask, np.abs(net_input-images)*100], v=True)
+			net_input, mask = masker.mask_2_channels(images, masked_pixel, self.n_masked_pixel)
+
+			#from eval import plot_tensors
+			#plot_tensors([images, net_input, mask, np.abs(net_input-images)*100], v=True)
+
 			return images, net_input, mask
 
 		return images[:self.channels,:,:], 
