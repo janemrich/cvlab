@@ -93,16 +93,27 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 			net_output = net(net_input)
 
-			val_loss += loss_function(net_output*mask, noisy*mask).item()
-			val_loss = val_loss * correct_loss(mask)
+			tmp_val_loss = loss_function(net_output*mask, noisy*mask).item()
+			val_loss += tmp_val_loss * correct_loss(mask)
 			n_losses += 1
 
-			writer.add_scalar('Loss/val', val_loss / n_losses, global_step=e)
+			writer.add_scalar('Loss/val', tmp_val_loss / n_losses, global_step=e)
 
-		del noisy, net_input, mask, net_output
+		del noisy, net_input, mask, net_output, tmp_val_loss
 
 		val_loss /= n_losses
 		scheduler.step(val_loss)
+
+		for noisy, net_input, mask in val_data_loader:
+			noisy, net_input, mask = noisy.to(device).float(), net_input.to(device), mask.to(device)
+
+			net_output = net(noisy)
+
+			loss = loss_function(net_output, noisy).item()
+
+			writer.add_scalar('Loss/val', loss, global_step=e)
+
+		del noisy, net_input, mask, net_output, loss
 
 		print('\nTrain Loss (', e, ' \t', round(train_loss,6), 'val-loss\t', round(val_loss,6))
 		with open('loss.txt', 'a') as f:
