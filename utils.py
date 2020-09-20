@@ -2,6 +2,7 @@ from torch.utils.data import random_split
 import numpy as np
 import os
 import re
+import torch
 
 
 def torch_random_split_frac(dataset, fracs):
@@ -31,3 +32,9 @@ def read_pgm(filename, byteorder='>'):
 								count=int(width)*int(height),
 								offset=0
 								).reshape((int(height), int(width)))
+
+def correct_loss(mask):
+	shape = mask.shape
+	return (shape[-1] * shape[-2] * shape[-3] * shape[-4]) / torch.sum(torch.sum(mask))
+
+

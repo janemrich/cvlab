@@ -15,6 +15,7 @@ import progress
 from eval import plot_denoise
 from eval import plot_denoising_masking
 from eval import evaluate_joint
+from utils import correct_loss
 
 def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device='cpu', name=None, mask_grid_size=4, fade_threshold=0, channels=2, learn_rate=0.0001, **kwargs):
 	logdir = os.path.join('runs', name + datetime.now().strftime("_%d%b-%H%M%S"))
@@ -55,8 +56,6 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 		bar = progress.Bar("Epoch {}, train".format(e), finish=train_size)
 		net.train()
 
-		mask_loss_factor = mask_grid_size**2
-
 		train_loss = 0.0
 		n_losses = 0
 		for noisy, net_input, mask in dataloader:
@@ -72,7 +71,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 			# loss = loss_function(net_output*mask*fade_factor, noisy*mask*fade_factor)
 			loss = loss_function(net_output*mask, noisy*mask)
-			loss = loss * mask_loss_factor
+			loss = loss * correct_loss(mask)
 			train_loss += loss.item()
 			n_losses += 1
 
@@ -94,7 +93,8 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 			net_output = net(net_input)
 
-			val_loss += loss_function(net_output*mask, noisy*mask).item() * mask_loss_factor
+			val_loss += loss_function(net_output*mask, noisy*mask).item()
+			val_loss = val_loss * correct_loss(mask)
 			n_losses += 1
 
 			writer.add_scalar('Loss/val', val_loss / n_losses, global_step=e)
