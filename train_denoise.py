@@ -110,7 +110,6 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 		plot_denoise(net, test_data_loader, device, e, channels, valdir)
 
-	torch.save(net, os.path.join(writer.log_dir, "model.sav"))
 	return logdir
 
 

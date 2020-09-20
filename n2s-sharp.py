@@ -64,8 +64,6 @@ if __name__=="__main__":
 	if model_type == 'n2s-dncnn':
 		from noise2self.models.dncnn import DnCNN
 		net = DnCNN(channels) # number of channels
-	if model_type == 'simple_res':
-		net = simple_res_net
 
 	net = net.float()
 
@@ -84,5 +82,7 @@ if __name__=="__main__":
 		channels=channels,
 		learn_rate=config['train']['learn_rate']
 		)
+
+	shutil.copyfile(args.config, os.path.join(resdir, os.path.basename(args.config)))
 
 	torch.save(net.state_dict(), os.path.join(resdir, "statedict.pt"))
