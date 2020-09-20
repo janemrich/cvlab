@@ -111,7 +111,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 			loss = loss_function(net_output, noisy).item()
 
-			writer.add_scalar('Loss/val', loss, global_step=e)
+			writer.add_scalar('Loss/whole_val', loss, global_step=e)
 
 		del noisy, net_input, mask, net_output, loss
 
