@@ -35,6 +35,9 @@ def read_pgm(filename, byteorder='>'):
 
 def correct_loss(mask):
 	shape = mask.shape
-	return (shape[-1] * shape[-2] * shape[-3] * shape[-4]) / torch.sum(torch.sum(mask))
+	total = 1
+	for s in shape:
+		total = total * s
+	return total / torch.sum(torch.sum(mask)).item()
 
 

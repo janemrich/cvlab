@@ -258,7 +258,9 @@ class N2SDataset(SmithData):
 
 		masker = Masker(width = self.mask_grid_size, mode='interpolate')
 		if self.channels == 1:
-			return images, masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+			images = images[:1, :, :]
+			net_input, mask = masker.mask(images.unsqueeze(0), masked_pixel)
+			return images, net_input.squeeze(0), mask
 		if self.channels == 2:
 			net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high, halfpixel=self.halfpixel)
 			# from eval import plot_tensors

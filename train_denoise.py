@@ -93,11 +93,11 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 			net_output = net(net_input)
 
-			tmp_val_loss = loss_function(net_output*mask, noisy*mask).item()
-			val_loss += tmp_val_loss * correct_loss(mask)
+			tmp_val_loss = loss_function(net_output*mask, noisy*mask).item() * correct_loss(mask)
+			val_loss += tmp_val_loss
 			n_losses += 1
 
-			writer.add_scalar('Loss/val', tmp_val_loss / n_losses, global_step=e)
+			writer.add_scalar('Loss/val', tmp_val_loss, global_step=e)
 
 		del noisy, net_input, mask, net_output, tmp_val_loss
 
@@ -115,7 +115,7 @@ def fit(net, loss_function, dataset, epochs, target_size, batch_size=32, device=
 
 		del noisy, net_input, mask, net_output, loss
 
-		print('\nTrain Loss (', e, ' \t', round(train_loss,6), 'val-loss\t', round(val_loss,6))
+		print('\nTrain Loss (', e, ' \t', round(train_loss,6), 'val-loss\t', round(val_loss, 6))
 		with open('loss.txt', 'a') as f:
 			print(e, ';{:.10f}'.format(train_loss), ';{:.10f}'.format(val_loss), file=f)
 

@@ -42,7 +42,7 @@ if __name__=="__main__":
 
 	if args.name is None:
 		train = config.get("train")
-		args.name = config.get("name") + config.get("model", None) + "_lr" + str(train.get("learn_rate")) + "_b" + str(train.get("batch_size")) + "_g" + str(train.get("mask_grid_size")) + "_hp" + str(config.get("dataset").get("halfpixel"))
+		args.name = config.get("name") + config.get("model", None) + "_lr_" + str(train.get("learn_rate")) + "_b_" + str(train.get("batch_size")) + "_g_" + str(train.get("mask_grid_size")) + "_hp" + str(config.get("dataset").get("halfpixel"))
 
 	channels = config['channels']
 
