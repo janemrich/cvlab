@@ -65,12 +65,15 @@ if __name__=="__main__":
 	torch.no_grad()
 	net.eval()
 
-	for i in range(1):#range(len(dataset)):
+	for i in range(2):#range(len(dataset)):
 		sharp, _ = dataset.get_full(i)
 		paths = dataset.paths_grouped[i]
 		basename = os.path.basename(paths[0])[:-9]
 		assert not np.all(sharp[0].detach().numpy() == sharp[1].detach().numpy())
 		
+		input_high = Image.fromarray(((1.0 - sharp.detach().numpy()[0]) * 65535).astype(np.uint32))
+		input_low = Image.fromarray(((1.0 - sharp.detach().numpy()[1]) * 65535).astype(np.uint32))
+		print(input_high)
 		if args.channelswap:
 			sharp = torch.stack((sharp[1], sharp[0]))
 
@@ -79,14 +82,14 @@ if __name__=="__main__":
 		if args.channelswap:
 			prediction = np.stack((prediction[1], prediction[0]), axis=0)
 
-		prediction_high = ((1.0 - prediction[0]) * 65535).astype(np.uint32)
-		prediction_low = ((1.0 - prediction[1]) * 65535).astype(np.uint32)
+		prediction_high = Image.fromarray(((1.0 - prediction[0]) * 65535).astype(np.uint32))
+		prediction_low = Image.fromarray(((1.0 - prediction[1]) * 65535).astype(np.uint32))
 
-		im_high = Image.fromarray(prediction_high)
-		im_low = Image.fromarray(prediction_low)
-
-		im_high.save(os.path.join(args.outdir, basename+"_high.png"))
-		im_low.save(os.path.join(args.outdir, basename+"_low.png"))
+		prediction_high.save(os.path.join(args.outdir, basename+"_high.png"))
+		prediction_low.save(os.path.join(args.outdir, basename+"_low.png"))
+		
+		input_high.save(os.path.join(args.outdir, "input_" + basename + "_high.png"))
+		input_low.save(os.path.join(args.outdir, "input_" + basename + "_low.png"))
 
 	if args.convert:
 		print("generated images, running high low conversion")
