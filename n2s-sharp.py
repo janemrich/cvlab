@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append('..')
 
@@ -10,6 +11,7 @@ from torch.nn import MSELoss
 from data import N2SDataset
 import model
 from train_denoise import fit
+import shutil
 
 """
 Config format:
@@ -39,7 +41,8 @@ if __name__=="__main__":
 		config = json.load(f)
 
 	if args.name is None:
-		args.name = config.get("name", None)
+		train = config.get("train")
+		args.name = config.get("name") + config.get("model", None) + "_lr_" + str(train.get("learn_rate")) + "_b_" + str(train.get("batch_size")) + "_g_" + str(train.get("mask_grid_size")) + "_hp" + str(config.get("dataset").get("halfpixel"))
 
 	channels = config['channels']
 
@@ -49,7 +52,7 @@ if __name__=="__main__":
 	model_type = config['model']
 	if model_type == 'unet':
 		from model import UNet
-		net = UNet(channels, channels, **config.get('model_params', {}))
+		net = UNet(channels, **config.get('model_params', {}))
 	if model_type == 'resnet':
 		from model import ResNet
 		net = ResNet(channels, channels, padding_mode='reflect', **config.get("model_params", {}))# in, out channels
@@ -62,14 +65,12 @@ if __name__=="__main__":
 	if model_type == 'n2s-dncnn':
 		from noise2self.models.dncnn import DnCNN
 		net = DnCNN(channels) # number of channels
-	if model_type == 'simple_res':
-		net = simple_res_net
 
 	net = net.float()
 
 	loss = MSELoss()
 
-	fit(net,
+	resdir = fit(net,
 		loss,
 		dataset,
 		config['train']['epochs'],
@@ -82,3 +83,7 @@ if __name__=="__main__":
 		channels=channels,
 		learn_rate=config['train']['learn_rate']
 		)
+
+	shutil.copyfile(args.config, os.path.join(resdir, os.path.basename(args.config)))
+
+	torch.save(net.state_dict(), os.path.join(resdir, "statedict.pt"))

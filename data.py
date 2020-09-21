@@ -184,7 +184,7 @@ class SmithData():
 class N2SDataset(SmithData):
 
 	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
-				complete_background_noise=False, channels=2, mask_grid_size=4, mask_shape_low=None, mask_shape_high=None, halfpixel=False, regular_reset=True):
+				complete_background_noise=False, channels=2, mask_grid_size=4, n_masked_pixel=2, regular_reset=True):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 1 # plus one because we extract the high and low patch shifted and need one extra column
@@ -193,10 +193,9 @@ class N2SDataset(SmithData):
 		self.drop_background = drop_background
 		self.channels = channels
 		self.mask_grid_size = mask_grid_size
-		self.mask_shape_high = mask_shape_high
-		self.mask_shape_low = mask_shape_low
+		self.n_masked_pixel = n_masked_pixel
+
 		self.get_calls = 0
-		self.halfpixel = halfpixel
 		self.regular_reset = regular_reset
 
 
@@ -250,7 +249,6 @@ class N2SDataset(SmithData):
 			shift_row:shift_row+patch.shape[1]-min(images.shape[1] - patch.shape[1], 0),
 			shift_col:shift_col+patch.shape[2]-min(images.shape[2] - patch.shape[2], 0)]
 
-		# images = patch[:, :, :-1]
 		images = torch.tensor(patch[:, :, :-1], dtype=torch.float)
 
 		rng = np.random.default_rng()
@@ -258,11 +256,17 @@ class N2SDataset(SmithData):
 
 		masker = Masker(width = self.mask_grid_size, mode='interpolate')
 		if self.channels == 1:
-			return images, masker.mask(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high)
+			images = images[:1, :, :]
+			net_input, mask = masker.mask(images.unsqueeze(0), masked_pixel)
+
+			return images, net_input.squeeze(0), mask
+
 		if self.channels == 2:
-			net_input, mask = masker.mask_channels(images, masked_pixel, mask_shape_low=self.mask_shape_low, mask_shape_high=self.mask_shape_high, halfpixel=self.halfpixel)
-			# from eval import plot_tensors
-			# plot_tensors([images, net_input, mask])
+			net_input, mask = masker.mask_2_channels(images, masked_pixel, self.n_masked_pixel)
+
+			#from eval import plot_tensors
+			#plot_tensors([images, net_input, mask, np.abs(net_input-images)*100], v=True)
+
 			return images, net_input, mask
 
 		return images[:self.channels,:,:], 
@@ -277,7 +281,7 @@ class N2SProDemosaicDataset(SmithData):
 			fill_missing: 'zero', 'same' or 'interp'
 	"""
 	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, drop_background=True, renewing_patches=True, fill_missing='same', has_rgb=True, sharp=False,
-					complete_background_noise=False, mask_grid_size=4, mask_shape_sharp_low=None, mask_shape_sharp_high=None, mask_shape_pro_low=None, mask_shape_pro_high=None, loss_shape='full', subpixelmask=False, halfpixel=False):
+					complete_background_noise=False, mask_grid_size=4, loss_shape='center', subpixelmask=False, halfpixel=False):
 		super(N2SProDemosaicDataset, self).__init__(root, invert, crop, sharp=sharp, has_rgb=has_rgb, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 3 # plus one because we extract the high and low patch shifted and need one extra column #### and plus two to generate sharp
@@ -290,10 +294,6 @@ class N2SProDemosaicDataset(SmithData):
 		self.get_calls = 0
 		# denoising
 		self.mask_grid_size = mask_grid_size
-		self.mask_shape_sharp_high = mask_shape_sharp_high
-		self.mask_shape_sharp_low = mask_shape_sharp_low
-		self.mask_shape_pro_high = mask_shape_pro_high
-		self.mask_shape_pro_low = mask_shape_pro_low
 		self.loss_shape = loss_shape
 		self.subpixelmask = subpixelmask
 		self.halfpixel = halfpixel
@@ -413,7 +413,7 @@ class N2SProDemosaicDataset(SmithData):
 		
 		del sharp_sparse, mask_sparse, filled_sharp, full_mask, fullest_mask
 		# plot_tensors([sharp, mask])
-		return sharp[:, :, 2:], mask
+		return sharp[:, :, 2:], mask[:, :, 2:]
 
 
 	def __getitem__(self, idx):
@@ -447,8 +447,8 @@ class N2SProDemosaicDataset(SmithData):
 		sharp = torch.tensor(sharp, dtype=torch.float)
 		pro = patch[:, :, 2:-1]
 
-		#from eval import plot_tensors
-		#plot_tensors([pro, net_input, mask, sharp, np.abs(net_input-sharp)*10], v=True)
+		# from eval import plot_tensors
+		# plot_tensors([pro, net_input, mask, sharp, np.abs(net_input-sharp)*100], v=True)
 
 		return pro, net_input, mask, sharp
 

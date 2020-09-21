@@ -39,7 +39,8 @@ if __name__=="__main__":
 		config = json.load(f)
 
 	if args.name is None:
-		args.name = config.get("name", None)
+		train = config.get("train")
+		args.name = config.get("name") + config.get("model", None) + "_lr" + str(train.get("learn_rate")) + "_b" + str(train.get("batch_size")) + "_g" + str(train.get("mask_grid_size")) + "_hp" + str(config.get("dataset").get("halfpixel"))
 
 	model_name = config.get("model", "unet")
 	model_params = config.get("model_params", {})
@@ -73,3 +74,5 @@ if __name__=="__main__":
 	resdir = fit(net, loss, fit_dataset, device=args.device, name=args.name, **config.get("fit", {}))
 
 	shutil.copyfile(args.config, os.path.join(resdir, os.path.basename(args.config)))
+
+	torch.save(net.state_dict(), os.path.join(resdir, "statedict.pt"))

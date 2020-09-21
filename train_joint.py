@@ -4,6 +4,7 @@ from PIL import Image, ImageOps
 from torch.utils.tensorboard import SummaryWriter
 import progress
 import utils
+from utils import correct_loss
 from eval import evaluate_joint, evaluate_color
 import os
 from datetime import datetime
@@ -39,8 +40,6 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 	valdir = os.path.join(writer.log_dir, "val")
 	os.mkdir(valdir)
 	
-	mask_loss_factor = mask_grid_size**2 * 2
-
 	eval_fn(ds_val, net, valdir, device, 0)
 
 	global_step = 0
@@ -52,7 +51,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 			optimizer.zero_grad()
 			net_output = net(net_input)
 			loss = criterion(net_output*mask, noisy*mask)
-			loss = loss * mask_loss_factor
+			loss = loss * correct_loss(mask)
 			loss.backward()
 			optimizer.step()
 			writer.add_scalar('Loss/train', loss.item(), global_step=global_step)
@@ -70,7 +69,7 @@ def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=Non
 				noisy, net_input, mask = noisy.to(device).float(), net_input.to(device), mask.to(device)
 
 				net_output = net(net_input)
-				losses += criterion(net_output*mask, noisy*mask).item() * mask_loss_factor
+				losses += criterion(net_output*mask, noisy*mask).item() * correct_loss(mask)
 				n_losses += 1
 				bar.inc_progress(len(noisy))
 			loss = losses / n_losses
