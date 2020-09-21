@@ -67,6 +67,7 @@ if __name__=="__main__":
 
 	for i in range(2):#range(len(dataset)):
 		sharp, _ = dataset.get_full(i)
+		sharp.to(args.device)
 		paths = dataset.paths_grouped[i]
 		basename = os.path.basename(paths[0])[:-9]
 		assert not np.all(sharp[0].detach().numpy() == sharp[1].detach().numpy())
