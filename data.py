@@ -465,6 +465,35 @@ class N2SProDemosaicDataset(SmithData):
 		return super(N2SProDemosaicDataset, self).__len__() * self.patches_per_image
 
 
+class SharpDemosaicDataset(SmithData):
+	"""Should only be used for inference on whole images. Does not do patching."""
+	def __init__(self, root, invert=True, crop=True, has_rgb=True):
+		super(SharpDemosaicDataset, self).__init__(root, invert, crop, has_rgb=has_rgb)
+	
+	def get_full(self, idx):
+		"""To match the interface of ProDemosaicDataset"""
+		return self.__getitem__(idx)
+
+	def __getitem__(self, idx):
+		lowres = super(SharpDemosaicDataset).__getitem__(idx)
+		cols = lowres.shape[-1]
+		# double up pixels
+		highres = np.empty(2, lowres.shape[1], lowres.shape[2] * 2)
+		highres[0, :, 0::2] = lowres[0] # high channel
+		highres[0, :, 1::2] = lowres[0]
+		highres[1, :, 0::2] = lowres[1] # low channel
+		highres[1, :, 1::2] = lowres[1]
+		# shift high to the right. This pushes one half pixel out of the array
+		highres[0, :, 1:] = highres[0, :, :-1]
+		#cut off half low pixel end empty high slot at the front
+		highres = highres[0, :, 1:]
+		assert highres.shape[-1] == lowres.shape[-1] * 2 - 1
+
+		return torch.tensor(highres), None  # match interface of a trainable dataset
+
+	def __len__(self):
+		return super(SharpDemosaicDataset, self).__len__()
+
 class ProDemosaicDataset(SmithData):
 	"""
 		Args:
@@ -510,14 +539,14 @@ class ProDemosaicDataset(SmithData):
 	def gen_sharp(self, patch):
 		if patch.shape[-1] % 2 == 0:
 			patch = patch[:, :, :-1]
-		patch_high = patch[1, :, :-1]
-		patch_low = patch[0, :, 1:]
+		patch_high = patch[0, :, :-1]
+		patch_low = patch[1, :, 1:]
 
 		sharp_sparse = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)))
 		sharp = np.zeros((patch.shape[0], patch.shape[1], (patch.shape[2]//2)*2))
 
-		sharp_sparse[1, :, :] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
-		sharp_sparse[0, :, :] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
+		sharp_sparse[0, :, :] = (patch_high[:, 0::2] + patch_high[:, 1::2]) / 2
+		sharp_sparse[1, :, :] = (patch_low[:, 0::2] + patch_low[:, 1::2]) / 2
 		
 		sharp[1, :, 0::2] = sharp_sparse[1, :, :]
 		sharp[0, :, 1::2] = sharp_sparse[0, :, :]
