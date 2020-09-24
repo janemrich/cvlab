@@ -555,7 +555,7 @@ class ProDemosaicDataset(SmithData):
 		# unshift
 		sharp[0, :, 1:] = sharp[0, :, :-1]
 		
-		return patch[:, :, 2:-1], sharp[:, :, 1:]
+		return patch[:, :, 1:-1], sharp[:, :, 1:]
 
 
 	def __getitem__(self, idx):
@@ -580,7 +580,7 @@ class ProDemosaicDataset(SmithData):
 		pro, sharp = self.gen_sharp(patch)
 
 		sharp = torch.tensor(sharp, dtype=torch.float)
-		pro = torch.tensor(patch, dtype=torch.float)
+		pro = torch.tensor(pro, dtype=torch.float)
 
 		return sharp, pro
 

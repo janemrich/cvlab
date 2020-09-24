@@ -10,7 +10,6 @@ import json
 from train_demosaic import fit
 import utils
 import shutil
-from noise2self.models.unet import UNet as N2SUnet
 
 """
 Config format:
