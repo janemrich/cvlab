@@ -17,7 +17,7 @@ if __name__=="__main__":
 	parser.add_argument("--config", type=str, nargs="?", default="", help="Use the configs the model was trained with to load it")
 	parser.add_argument("--class", type=str, nargs="?", default="unet", help="which model class to use")
 	parser.add_argument("--statedict", type=str, nargs="?", const=True, default=False, help="whether the model save is a state dict. Assumes pickle elsewise.")
-	parser.add_argument("--convert", type=bool, default=False)
+	parser.add_argument("--noconvert", nargs="?", type=bool, default=False, const=True)
 	parser.add_argument("--dataset", type=str, default="pro", help="Type of dataset, sharp or pro")
 	parser.add_argument("--device", type=str, default="cpu", help="The device to use for inference")
 	parser.add_argument("--channelswap", type=bool, nargs="?", default=False, const=True, help="Use for older models that were trained on the dataset that swaps channels")
@@ -49,7 +49,7 @@ if __name__=="__main__":
 			args.inputdir,
 			crop=False,
 			sharp=True,
-			patches_per_image=2)
+			patches_per_image=1)
 
 	state = torch.load(args.model, map_location=args.device)
 	if args.statedict:
@@ -70,7 +70,7 @@ if __name__=="__main__":
 	torch.no_grad()
 	net.eval()
 
-	for i in range(2):#range(len(dataset)):
+	for i in range(len(dataset)):
 		sharp, _ = dataset.get_full(i)
 		sharp.to(args.device)
 		paths = dataset.paths_grouped[i]
@@ -79,11 +79,12 @@ if __name__=="__main__":
 		
 		input_high = Image.fromarray(((1.0 - sharp.detach().numpy()[0]) * 65535).astype(np.uint32))
 		input_low = Image.fromarray(((1.0 - sharp.detach().numpy()[1]) * 65535).astype(np.uint32))
-		print(input_high)
+		
 		if args.channelswap:
 			sharp = torch.stack((sharp[1], sharp[0]))
 
-		prediction = net(sharp.unsqueeze(0)).squeeze(0).detach().numpy()
+		prediction = net(sharp.unsqueeze(0))
+		prediction = prediction.squeeze(0).detach().numpy()
 		
 		if args.channelswap:
 			prediction = np.stack((prediction[1], prediction[0]), axis=0)
@@ -97,7 +98,7 @@ if __name__=="__main__":
 		input_high.save(os.path.join(args.outdir, "input_" + basename + "_high.png"))
 		input_low.save(os.path.join(args.outdir, "input_" + basename + "_low.png"))
 
-	if args.convert:
+	if not args.noconvert:
 		print("generated images, running high low conversion")
 		os.system("./hilo_converter_v1.2 {} {}".format(args.outdir, args.outdir))
 
