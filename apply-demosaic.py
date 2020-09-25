@@ -17,7 +17,7 @@ if __name__=="__main__":
 	parser.add_argument("--config", type=str, nargs="?", default="", help="Use the configs the model was trained with to load it")
 	parser.add_argument("--class", type=str, nargs="?", default="unet", help="which model class to use")
 	parser.add_argument("--statedict", type=str, nargs="?", const=True, default=False, help="whether the model save is a state dict. Assumes pickle elsewise.")
-	parser.add_argument("--convert", type=bool, default=True)
+	parser.add_argument("--convert", type=bool, default=False)
 	parser.add_argument("--dataset", type=str, default="pro", help="Type of dataset, sharp or pro")
 	parser.add_argument("--device", type=str, default="cpu", help="The device to use for inference")
 	parser.add_argument("--channelswap", type=bool, nargs="?", default=False, const=True, help="Use for older models that were trained on the dataset that swaps channels")
