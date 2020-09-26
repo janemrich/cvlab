@@ -2,7 +2,7 @@ import argparse
 import os
 import torch
 import numpy as np
-from data import ProDemosaicDataset, SharpDemosaicDataset
+from data import ProDemosaicDataset, SharpDemosaicDataset, N2SDataset
 import matplotlib.pyplot as plt
 from PIL import Image
 import json
@@ -44,6 +44,12 @@ if __name__=="__main__":
 		dataset = SharpDemosaicDataset(
 			args.inputdir,
 			crop=False)
+	elif args.dataset == "direct_sharp":
+		dataset = N2SDataset(
+			args.inputdir,
+			crop=False,
+			sharp=True,
+			patches_per_image=1)
 
 	state = torch.load(args.model, map_location=args.device)
 	if args.statedict:

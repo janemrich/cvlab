@@ -183,7 +183,7 @@ class SmithData():
 
 class N2SDataset(SmithData):
 
-	def __init__(self, root, target_size, sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
+	def __init__(self, root, target_size=[128, 128], sharp=False, invert=True, crop=True, drop_background=True, patches_per_image=8,
 				complete_background_noise=False, channels=2, mask_grid_size=4, n_masked_pixel=2, regular_reset=True):
 		super(N2SDataset, self).__init__(root, invert, crop, sharp, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
@@ -270,6 +270,13 @@ class N2SDataset(SmithData):
 			return images, net_input, mask
 
 		return images[:self.channels,:,:], 
+
+	def get_full(self, idx):
+		"""Does not do patching."""
+		image = super(N2SDataset, self).__getitem__(idx)
+		image = torch.tensor(image[:self.channels, :, :], dtype=torch.float)
+
+		return image, torch.zeros_like(image)
 
 	def __len__(self):
 		return super(N2SDataset, self).__len__() * self.patches_per_image
