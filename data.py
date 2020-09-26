@@ -587,7 +587,7 @@ class ProDemosaicDataset(SmithData):
 	def get_full(self, idx):
 		"""Does not do patching."""
 		pro = super(ProDemosaicDataset, self).__getitem__(idx)
-		sharp = self.gen_sharp(pro)
+		pro, sharp = self.gen_sharp(pro)
 		pro = torch.tensor(pro[:, :, :sharp.shape[-1]], dtype=torch.float)
 		sharp = torch.tensor(sharp, dtype=torch.float)
 

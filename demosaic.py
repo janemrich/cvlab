@@ -29,6 +29,7 @@ def cli():
 	parser.add_argument("--config", type=str, nargs="?", default="demosaic-default.json", help="path to configuration file for training setup")
 	parser.add_argument("--device", type=str, nargs="?", default="cpu")
 	parser.add_argument("--name", type=str, nargs="?", default=None)
+	parser.add_argument("--runsdir", type=str, nargs="?", default='runs')
 	
 	return parser.parse_args()	
 
@@ -66,14 +67,14 @@ if __name__=="__main__":
 	pretrain = config.get("pretrain", None)
 	if pretrain is not None:
 		pretrain_dataset = ProDemosaicDataset(pretrain["data"], **pretrain.get("dataset", {}))
-		fit(net, loss, pretrain_dataset, device=args.device, name=args.name, **pretrain.get("fit", {}), pretrain=True)
+		fit(net, loss, pretrain_dataset, device=args.device, name=args.name, **pretrain.get("fit", {}), pretrain=True, runsdir=args.runsdir)
 
 	test_frac = config.get("test_frac", 0.1)
 	train_dataset, test_dataset = utils.torch_random_split_frac(dataset, [1.0-test_frac, test_frac])
 
 	resdir = fit(net, loss, train_dataset, device=args.device, name=args.name, **config.get("fit", {}))
 
-	shutil.copyfile(args.config, os.path.join(resdir, os.path.basename(args.config)))
+	shutil.move(args.config, os.path.join(resdir, os.path.basename(args.config)))
 	
 	# torch.save(net, os.path.join(resdir, "model.sav"))
 	torch.save(net.state_dict(), os.path.join(resdir, "statedict.pt"))

@@ -8,12 +8,12 @@ from eval import evaluate_smithdata, evaluate_color
 import os
 from datetime import datetime
 
-def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None, pretrain=False, val_frac=0.1, eval_fn=evaluate_smithdata, **kwargs):
+def fit(net, criterion, dataset, epochs=3, batch_size=24, device="cpu", name=None, pretrain=False, val_frac=0.1, eval_fn=evaluate_smithdata, runsdir='runs', **kwargs):
 	if "cuda" in device:
 		torch.backends.cudnn.benchmark = True
 	if pretrain:
 		name = name + "-pre"
-	logdir = os.path.join('runs', name + datetime.now().strftime("_%d%b-%H%M%S")) if name is not None else None
+	logdir = os.path.join(runsdir, name + datetime.now().strftime("_%d%b-%H%M%S")) if name is not None else None
 	writer = SummaryWriter(log_dir=logdir)
 
 	ds_train, ds_val = utils.torch_random_split_frac(dataset, [1.0-val_frac, val_frac])
