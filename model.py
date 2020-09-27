@@ -172,7 +172,7 @@ class ResBlock(nn.Module):
 		self.convs = torch.nn.ModuleList(
 			[ConvBlock(in_channels, hidden_channels[0], io_kernel_size, activation=activation, dilation=dilation)] + 
 			[ConvBlock(i, o, kernel_size, activation=activation) for i, o in zip(hidden_channels[:-1], hidden_channels[1:])])
-		self.conv_out = torch.nn.Conv2d(hidden_channels[-1], in_channels, io_kernel_size, padding=kernel_size//2, padding_mode=padding_mode)
+		self.conv_out = torch.nn.Conv2d(hidden_channels[-1], in_channels, io_kernel_size, padding=io_kernel_size//2, padding_mode=padding_mode)
 		
 
 	def forward(self, x):
