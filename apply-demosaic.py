@@ -77,9 +77,6 @@ if __name__=="__main__":
 		basename = os.path.basename(paths[0])[:-9]
 		assert not np.all(sharp[0].detach().numpy() == sharp[1].detach().numpy())
 		
-		input_high = Image.fromarray(((1.0 - sharp.detach().numpy()[0]) * 65535).astype(np.uint32))
-		input_low = Image.fromarray(((1.0 - sharp.detach().numpy()[1]) * 65535).astype(np.uint32))
-		
 		if args.channelswap:
 			sharp = torch.stack((sharp[1], sharp[0]))
 
@@ -95,10 +92,7 @@ if __name__=="__main__":
 		prediction_high.save(os.path.join(args.outdir, basename+"_high.png"))
 		prediction_low.save(os.path.join(args.outdir, basename+"_low.png"))
 		
-		input_high.save(os.path.join(args.outdir, "input_" + basename + "_high.png"))
-		input_low.save(os.path.join(args.outdir, "input_" + basename + "_low.png"))
-
 	if not args.noconvert:
 		print("generated images, running high low conversion")
-		os.system("./hilo_converter_v1.2 {} {}".format(args.outdir, args.outdir))
+		os.system("yes | ./hilo_converter_v1.2 {} {}".format(args.outdir, args.outdir))
 
