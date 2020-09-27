@@ -95,7 +95,16 @@ class Masker():
 
         rng = np.random.default_rng()
         channel = rng.integers(2)
-        if n == 1:
+        if n == 0:
+            if channel == 0:
+                net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i)
+                net_input[:, :1, :, :] = x[:, :1, :, :]
+                net_input[:, 1:, :, :], mask_high = x[:, 1:, :, :], torch.zeros_like(mask_low)
+            else:
+                net_input[:, 1:, :, :], mask_high = self.mask(x[:, 1:, :, :], i)
+                net_input[:, 1:, :, :] = x[:, 1:, :, :]
+                net_input[:, :1, :, :], mask_low = x[:, :1, :, :], torch.zeros_like(mask_high)
+        elif n == 1:
             if channel == 0:
                 net_input[:, :1, :, :], mask_low = self.mask(x[:, :1, :, :], i)
                 net_input[:, 1:, :, :], mask_high = x[:, 1:, :, :], torch.zeros_like(mask_low)
