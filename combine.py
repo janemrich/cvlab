@@ -25,4 +25,4 @@ new_im = Image.new('I', (total_width*128, max_height*128))
 for im, (row, col) in zip(images, loc):
   new_im.paste(im, (128*col, 128*row))
 
-new_im.save(outpath / 'collection.png')
+new_im.save(outpath / ('col_' + inpath.parts[-1] + '.png'))
