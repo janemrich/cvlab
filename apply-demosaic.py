@@ -21,8 +21,11 @@ if __name__=="__main__":
 	parser.add_argument("--dataset", type=str, default="pro", help="Type of dataset, sharp or pro")
 	parser.add_argument("--device", type=str, default="cpu", help="The device to use for inference")
 	parser.add_argument("--channelswap", type=bool, nargs="?", default=False, const=True, help="Use for older models that were trained on the dataset that swaps channels")
+	parser.add_argument("--channels", type=int, default=2, help="number of denoising channels" )
 
 	args = parser.parse_args()
+
+	channels = args.channels
  
 	if not os.path.exists(args.inputdir):
 		raise ValueError("Input directory not found: {}".format(args.inputdir))
@@ -49,6 +52,7 @@ if __name__=="__main__":
 			args.inputdir,
 			crop=False,
 			sharp=True,
+			channels=channels,
 			patches_per_image=1)
 
 	state = torch.load(args.model, map_location=args.device)
@@ -61,7 +65,7 @@ if __name__=="__main__":
 			net = model.UNet(2, **model_params)
 		elif model_name == "n2s-unet":
 			from noise2self.models.unet import Unet
-			net = Unet(n_channel_in=2, n_channel_out=2, **model_params)
+			net = Unet(n_channel_in=channels, n_channel_out=channels, **model_params)
 		net.load_state_dict(state)
 	else:
 		net = state
@@ -75,22 +79,29 @@ if __name__=="__main__":
 		sharp.to(args.device)
 		paths = dataset.paths_grouped[i]
 		basename = os.path.basename(paths[0])[:-9]
-		assert not np.all(sharp[0].detach().numpy() == sharp[1].detach().numpy())
-		
-		if args.channelswap:
-			sharp = torch.stack((sharp[1], sharp[0]))
+
+		if channels == 2:
+			assert not np.all(sharp[0].detach().numpy() == sharp[1].detach().numpy())
+			
+			if args.channelswap:
+				sharp = torch.stack((sharp[1], sharp[0]))
 
 		prediction = net(sharp.unsqueeze(0))
 		prediction = prediction.squeeze(0).detach().numpy()
 		
-		if args.channelswap:
-			prediction = np.stack((prediction[1], prediction[0]), axis=0)
+		if channels == 2:
+			if args.channelswap:
+				prediction = np.stack((prediction[1], prediction[0]), axis=0)
 
-		prediction_high = Image.fromarray(((1.0 - prediction[0]) * 65535).astype(np.uint32))
-		prediction_low = Image.fromarray(((1.0 - prediction[1]) * 65535).astype(np.uint32))
+			prediction_high = Image.fromarray(((1.0 - prediction[0]) * 65535).astype(np.uint32))
+			prediction_low = Image.fromarray(((1.0 - prediction[1]) * 65535).astype(np.uint32))
 
-		prediction_high.save(os.path.join(args.outdir, basename+"_high.png"))
-		prediction_low.save(os.path.join(args.outdir, basename+"_low.png"))
+			prediction_high.save(os.path.join(args.outdir, basename+"_high.png"))
+			prediction_low.save(os.path.join(args.outdir, basename+"_low.png"))
+		else:
+			prediction_high = Image.fromarray(((1.0 - prediction[0]) * 65535).astype(np.uint32))
+			prediction_high.save(os.path.join(args.outdir, basename+"_high.png"))
+
 		
 	if not args.noconvert:
 		print("generated images, running high low conversion")
