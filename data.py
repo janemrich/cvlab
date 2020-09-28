@@ -562,7 +562,15 @@ class ProDemosaicDataset(SmithData):
 		# unshift
 		sharp[0, :, 1:] = sharp[0, :, :-1]
 		
-		return patch[:, :, 1:-1], sharp[:, :, 1:]
+		# this is most correct, but yields uneven size in column direction
+		# return patch[:, :, 1:-1], sharp[:, :, 1:]
+		
+		patch = patch[:, :, :-1]
+		
+		assert patch.shape == sharp.shape
+		assert patch.shape[-1] % 2 == 0
+
+		return patch, sharp
 
 
 	def __getitem__(self, idx):

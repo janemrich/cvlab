@@ -7,7 +7,8 @@ _activations = {
 	'relu': torch.nn.ReLU,
 	'tanh': torch.nn.Tanh,
 	'sigmoid': torch.nn.Sigmoid,
-	'leakyrelu': torch.nn.LeakyReLU
+	'leakyrelu': torch.nn.LeakyReLU,
+	'selu': torch.nn.SELU
 }
 
 
@@ -160,16 +161,18 @@ class UNet(nn.Module):
 		return out 
 
 class ResBlock(nn.Module):
-	def __init__(self, in_channels, kernel_size, padding_mode='reflect', hidden_channels=[], activation='relu', last_layer_activation=True, dilation=False):
+	def __init__(self, in_channels, kernel_size, padding_mode='reflect', hidden_channels=[], activation='relu', last_layer_activation=True, dilation=False, io_kernel_size=None):
 		super(ResBlock, self).__init__()
+		if io_kernel_size is None:
+			io_kernel_size = kernel_size
 		self.last_layer_activation = last_layer_activation
 		self.activation = _activations[activation]() if last_layer_activation else None
 		if len(hidden_channels) == 0:
 			hidden_channels = [in_channels]
 		self.convs = torch.nn.ModuleList(
-			[ConvBlock(in_channels, hidden_channels[0], kernel_size, activation=activation, dilation=dilation)] + 
+			[ConvBlock(in_channels, hidden_channels[0], io_kernel_size, activation=activation, dilation=dilation)] + 
 			[ConvBlock(i, o, kernel_size, activation=activation) for i, o in zip(hidden_channels[:-1], hidden_channels[1:])])
-		self.conv_out = torch.nn.Conv2d(hidden_channels[-1], in_channels, kernel_size, padding=kernel_size//2, padding_mode=padding_mode)
+		self.conv_out = torch.nn.Conv2d(hidden_channels[-1], in_channels, io_kernel_size, padding=io_kernel_size//2, padding_mode=padding_mode)
 		
 
 	def forward(self, x):
@@ -184,11 +187,11 @@ class ResBlock(nn.Module):
 
 class ResNet(nn.Module):
 	"""Stack multiple resblocks and an in and out convolutiono"""
-	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu', full_res=False, last_layer_activation='none', padding_mode='zeros', in_conv_kernel=3, block_last_layer_activation=True, dilation=False):
+	def __init__(self, in_channels, out_channels, in_conv=[16, 32, 64], res_blocks=[[64, 64, 64], [64, 64, 64], [64, 64, 64]], activation='relu', full_res=False, last_layer_activation='none', padding_mode='zeros', in_conv_kernel=3, block_last_layer_activation=True, dilation=False, block_io_kernel=None):
 		super(ResNet, self).__init__()
 		self.net = torch.nn.Sequential(
 			*[ConvBlock(i, o, in_conv_kernel, activation=activation, padding_mode=padding_mode, dilation=dilation) for i, o in zip([in_channels]+in_conv[:-1], in_conv)],
-			*[ResBlock(in_conv[-1], 3, hidden_channels=block, activation=activation, padding_mode=padding_mode, last_layer_activation=block_last_layer_activation) for block in res_blocks],
+			*[ResBlock(in_conv[-1], 3, hidden_channels=block, activation=activation, padding_mode=padding_mode, last_layer_activation=block_last_layer_activation, io_kernel_size=block_io_kernel) for block in res_blocks],
 			nn.Conv2d(in_conv[-1], in_channels, kernel_size=1)
 		)
 		self.full_res = full_res
