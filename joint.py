@@ -39,7 +39,7 @@ if __name__=="__main__":
 		config = json.load(f)
 
 	if args.name is None:
-		train = config.get("train")
+		train = config.get("fit")
 		args.name = config.get("name") + config.get("model", None) + "_lr" + str(train.get("learn_rate")) + "_b" + str(train.get("batch_size")) + "_g" + str(train.get("mask_grid_size")) + "_hp" + str(config.get("dataset").get("halfpixel"))
 
 	model_name = config.get("model", "unet")
