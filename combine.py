@@ -8,6 +8,7 @@ import numpy as np
 parser = argparse.ArgumentParser()
 parser.add_argument("inpath")
 parser.add_argument("outpath")
+parser.add_argument("--rgb", type=bool, default=False, nargs="?", const=True)
 
 args = parser.parse_args()
 inpath = Path(args.inpath)
@@ -20,7 +21,10 @@ widths, heights = zip(*(i.size for i in images))
 total_width = loc[:,1].max()+1
 max_height = loc[:, 0].max()+1
 
-new_im = Image.new('I', (total_width*128, max_height*128))
+if args.rgb:
+  new_im = Image.new('RGB', (total_width*128, max_height*128))
+else:
+  new_im = Image.new('I', (total_width*128, max_height*128))
 
 for im, (row, col) in zip(images, loc):
   new_im.paste(im, (128*col, 128*row))
