@@ -491,12 +491,15 @@ class SharpDemosaicDataset(SmithData):
 		highres[1, :, 0::2] = lowres[1] # low channel
 		highres[1, :, 1::2] = lowres[1]
 		# shift high to the right. This pushes one half pixel out of the array
-		highres[0, :, 1:] = highres[0, :, :-1]
+		# highres[0, :, 1:] = highres[0, :, :-1]
+		highres[0, :, :-1] = highres[0, :, 1:]
 		
 		#cut off half low pixel end empty high slot at the front
 		# HACKY: we cut off full pixel because the simulated data is wrong and has the high sensor "sitck out"/"stand over"
-		highres = highres[:, :, 2:]
-		assert highres.shape[-1] == lowres.shape[-1] * 2 - 2
+		
+		# HACKY: we dont cut off to have an even number of columns for n2s unet
+		# highres = highres[:, :, 2:]
+		# assert highres.shape[-1] == lowres.shape[-1] * 2 - 2
 
 		return torch.tensor(highres, dtype=torch.float32), None  # match interface of a trainable dataset
 
