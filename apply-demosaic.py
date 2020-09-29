@@ -22,6 +22,10 @@ if __name__=="__main__":
 	parser.add_argument("--device", type=str, default="cpu", help="The device to use for inference")
 	parser.add_argument("--channelswap", type=bool, nargs="?", default=False, const=True, help="Use for older models that were trained on the dataset that swaps channels")
 	parser.add_argument("--channels", type=int, default=2, help="number of denoising channels" )
+	parser.add_argument("--save_input", action="store_true")
+	parser.add_argument("--save_gt", action="store_true")
+	parser.add_argument("--chop", type=int, default=1)
+	parser.add_argument("--n2s", action="store_true")
 
 	args = parser.parse_args()
 
@@ -75,8 +79,16 @@ if __name__=="__main__":
 	net.eval()
 
 	for i in range(len(dataset)):
-		sharp, _ = dataset.get_full(i)
-		sharp.to(args.device)
+		sharp, pro = dataset.get_full(i)
+		sharp = sharp.to(args.device)
+		
+		if args.n2s:
+			print("N2S evening")
+			sharp = sharp[:, :-(sharp.shape[1] % 16), sharp.shape[2] % 16:]
+			pro = pro[:, :-(pro.shape[1] %16), pro.shape[2] % 16:]
+			print(sharp.shape)
+
+
 		paths = dataset.paths_grouped[i]
 		basename = os.path.basename(paths[0])[:-9]
 
@@ -85,9 +97,18 @@ if __name__=="__main__":
 			
 			if args.channelswap:
 				sharp = torch.stack((sharp[1], sharp[0]))
+		
+		if pro is not None:
+			pro = pro.to('cpu').detach().numpy()
 
-		prediction = net(sharp.unsqueeze(0))
-		prediction = prediction.squeeze(0).detach().numpy()
+		prediction = np.zeros_like(pro)
+		if args.chop > 1:
+			idx = [int(x) for x in np.linspace(0, sharp.shape[-2], args.chop)] # indexes
+			assert idx[-1] == sharp.shape[-2]
+			for begin, end in zip(idx[:-1], idx[1:]):
+				prediction[:, begin:end, :] = net(sharp[:, begin:end, :].unsqueeze(0)).squeeze(0).detach().numpy()
+		else:
+			prediction = net(sharp.unsqueeze(0)).squeeze(0).detach().numpy()
 		
 		if channels == 2:
 			if args.channelswap:
@@ -102,7 +123,20 @@ if __name__=="__main__":
 			prediction_high = Image.fromarray(((1.0 - prediction[0]) * 65535).astype(np.uint32))
 			prediction_high.save(os.path.join(args.outdir, basename+"_high.png"))
 
-		
+		prediction_high.save(os.path.join(args.outdir, basename+"_high.png"))
+		prediction_low.save(os.path.join(args.outdir, basename+"_low.png"))
+
+		if args.save_gt:
+			if pro is None:
+				print("There is not GT to save for sharp data")
+			gt_high = Image.fromarray(((1.0 - pro[0]) * 65535).astype(np.uint32))
+			gt_low = Image.fromarray(((1.0 - pro[1]) * 65535).astype(np.uint32))
+			gt_high.save(os.path.join(args.outdir, "gt_"+basename+"_high.png"))
+			gt_low.save(os.path.join(args.outdir, "gt_"+basename+"_low.png"))
+
+		if args.save_input:
+			raise NotImplementedError
+
 	if not args.noconvert:
 		print("generated images, running high low conversion")
 		os.system("yes | ./hilo_converter_v1.2 {} {}".format(args.outdir, args.outdir))
