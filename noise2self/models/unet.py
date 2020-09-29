@@ -6,10 +6,12 @@ from noise2self.models.modules import ConvBlock
 
 
 class Unet(nn.Module):
-    def __init__(self, n_channel_in=1, n_channel_out=1, residual=False, groups=1, down='conv', up='tconv', activation='selu'):
+    def __init__(self, n_channel_in=1, n_channel_out=1, residual=False, groups=None, down='conv', up='tconv', activation='selu'):
         super(Unet, self).__init__()
 
         self.residual = residual
+        if groups == None:
+            groups = n_channel_in
 
         if down == 'maxpool':
             self.down1 = nn.MaxPool2d(kernel_size=2)
@@ -27,6 +29,11 @@ class Unet(nn.Module):
                 self.down2 = nn.Conv2d(128, 128, kernel_size=2, stride=2, groups=128)
                 self.down3 = nn.Conv2d(256, 256, kernel_size=2, stride=2, groups=256)
                 self.down4 = nn.Conv2d(512, 512, kernel_size=2, stride=2, groups=512)
+            elif groups == 2: 
+                self.down1 = nn.Conv2d(64, 64, kernel_size=2, stride=2, groups=32)
+                self.down2 = nn.Conv2d(128, 128, kernel_size=2, stride=2, groups=64)
+                self.down3 = nn.Conv2d(256, 256, kernel_size=2, stride=2, groups=128)
+                self.down4 = nn.Conv2d(512, 512, kernel_size=2, stride=2, groups=256)
             elif groups == 0:
                 self.down1 = nn.Conv2d(64, 64, kernel_size=2, stride=2)
                 self.down2 = nn.Conv2d(128, 128, kernel_size=2, stride=2)
@@ -59,6 +66,11 @@ class Unet(nn.Module):
                 self.up2 = nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2, groups=256)
                 self.up3 = nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2, groups=128)
                 self.up4 = nn.ConvTranspose2d(64, 64, kernel_size=2, stride=2, groups=64)
+            elif groups == 2:
+                self.up1 = nn.ConvTranspose2d(512, 512, kernel_size=2, stride=2, groups=256)
+                self.up2 = nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2, groups=128)
+                self.up3 = nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2, groups=64)
+                self.up4 = nn.ConvTranspose2d(64, 64, kernel_size=2, stride=2, groups=32)
             elif groups == 0:
                 self.up1 = nn.ConvTranspose2d(512, 512, kernel_size=2, stride=2)
                 self.up2 = nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2)

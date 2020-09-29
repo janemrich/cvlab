@@ -288,7 +288,7 @@ class N2SProDemosaicDataset(SmithData):
 			fill_missing: 'zero', 'same' or 'interp'
 	"""
 	def __init__(self, root, target_size, invert=True, crop=True, patches_per_image=8, drop_background=True, renewing_patches=True, fill_missing='same', has_rgb=True, sharp=False,
-					complete_background_noise=False, mask_grid_size=4, loss_shape='center', subpixelmask=False, halfpixel=False):
+					complete_background_noise=False, mask_grid_size=4, loss_shape='center', subpixelmask=True, halfpixel=False):
 		super(N2SProDemosaicDataset, self).__init__(root, invert, crop, sharp=sharp, has_rgb=has_rgb, complete_background_noise=complete_background_noise)
 		self.patch_rows = target_size[1]
 		self.patch_cols = target_size[0] + 3 # plus one because we extract the high and low patch shifted and need one extra column #### and plus two to generate sharp
