@@ -135,9 +135,14 @@ if __name__=="__main__":
 			gt_low.save(os.path.join(args.outdir, "gt_"+basename+"_low.png"))
 
 		if args.save_input:
-			raise NotImplementedError
+			sharp = sharp.detach().numpy()
+			input_high = Image.fromarray(((1.0 - sharp[0]) * 65535).astype(np.uint32))
+			input_low = Image.fromarray(((1.0 - sharp[1]) * 65535).astype(np.uint32))
+			input_high.save(os.path.join(args.outdir, "input_"+basename+"_high.png"))
+			input_low.save(os.path.join(args.outdir, "input_"+basename+"_low.png"))
+
 
 	if not args.noconvert:
 		print("generated images, running high low conversion")
-		os.system("yes | ./hilo_converter_v1.2 {} {}".format(args.outdir, args.outdir))
+		os.system("yes | ~/uni/cv-project/cvlab/hilo_converter_v1.2 {} {}".format(args.outdir, args.outdir))
 
