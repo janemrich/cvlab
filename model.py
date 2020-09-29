@@ -62,7 +62,7 @@ class Down(nn.Module):
 	def __init__(self, in_channels, out_channels, convs, activation='relu', downsampling='conv'):
 		super().__init__()
 		if downsampling == 'conv':
-			self.downsampling = nn.Conv2D(in_channels, in_channels, kernel_size=2, stride=2, groups=32)
+			self.downsampling = nn.Conv2d(in_channels, in_channels, kernel_size=2, stride=2, groups=in_channels)
 		elif downsampling == 'avg':
 			self.downsampling = nn.AvgPool2d(kernel_size=2)
 		else:
