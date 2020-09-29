@@ -84,8 +84,8 @@ if __name__=="__main__":
 		
 		if args.n2s:
 			print("N2S evening")
-			sharp = sharp[:, :-(sharp.shape[1] % 16), sharp.shape[2] % 16:]
-			pro = pro[:, :-(pro.shape[1] %16), pro.shape[2] % 16:]
+			sharp = sharp[:, :(sharp.shape[1] - sharp.shape[1] % 16), sharp.shape[2] % 16:]
+			pro = pro[:, :(pro.shape[1] - pro.shape[1] %16), pro.shape[2] % 16:]
 			print(sharp.shape)
 
 
