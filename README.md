@@ -6,3 +6,6 @@ Due to the nature of the project, there are no ground truth images available. Th
 Contains code for hyperparameter search, architecture search, testing and benchmarking versus traditional denoising methods.
 
 As the denoising was part of a bigger project, files for demosaicing and joint demosaicing and denoising are available as well.
+
+# Report
+A detailed report on this project can be found here: https://github.com/janemrich/cvlab/blob/master/Demosaicing_and_Denoising_For_Interleaved_X_Ray_Channels.pdf
